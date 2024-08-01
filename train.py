@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.utilities.seed import seed_everything
+from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from torchvision.datasets import ImageFolder
