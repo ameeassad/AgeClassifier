@@ -16,6 +16,10 @@ from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from torchvision.datasets import ImageFolder
 
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
 from dataset import ArtportalenDataModule
 
 # solver settings
@@ -156,6 +160,14 @@ class SimpleModel(LightningModule):
         acc = self.val_acc(pred, target)
         self.log_dict({'val/loss': loss, 'val/acc': acc})
 
+        # Grad-CAM integration
+        # cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]], use_cuda=torch.cuda.is_available())
+        # targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
+        # grayscale_cam = cam(input_tensor=x, targets=targets)
+        # grayscale_cam = grayscale_cam[0, :]
+        # visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
+
+
     def configure_optimizers(self):
         optimizer = get_optimizer(self.parameters())
         lr_scheduler_config = get_lr_scheduler_config(optimizer)
@@ -233,4 +245,6 @@ if __name__ == '__main__':
 
     print('Args:')
     pprint(args.__dict__)
+
+    
     trainer.fit(model, data)
