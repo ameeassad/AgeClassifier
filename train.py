@@ -16,9 +16,9 @@ from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from torchvision.datasets import ImageFolder
 
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+# from pytorch_grad_cam import GradCAM
+# from pytorch_grad_cam.utils.image import show_cam_on_image
+# from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from dataset import ArtportalenDataModule
 
