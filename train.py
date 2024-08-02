@@ -11,6 +11,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
@@ -124,6 +125,7 @@ class SimpleModel(LightningModule):
         model_name: str = 'resnet18',
         pretrained: bool = False,
         num_classes: int | None = None,
+        outdir: str = 'results',
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -134,6 +136,8 @@ class SimpleModel(LightningModule):
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.val_loss = nn.CrossEntropyLoss()
         self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
+        
+        self.outdir = outdir
 
     def forward(self, x):
         return self.model(x)
@@ -219,13 +223,15 @@ def get_trainer(args: argparse.Namespace) -> Trainer:
     callbacks = get_basic_callbacks(checkpoint_interval=args.save_interval)
     accelerator, devices, strategy = get_gpu_settings(args.gpu_ids, args.n_gpu)
 
+    wandb_logger = WandbLogger(project='age-classifier')
+
     trainer_args = {
         'max_epochs': args.epochs,
         'callbacks': callbacks,
         'default_root_dir': args.outdir,
         'accelerator': accelerator,
         'devices': devices,
-        'logger': True,
+        'logger': wandb_logger,
         'deterministic': True,
     }
 
@@ -244,7 +250,7 @@ if __name__ == '__main__':
     data.setup_from_coco(args.annot_dir + '/modified_val_annotations.json', args.annot_dir + '/modified_val_annotations.json')
 
     model = SimpleModel(
-        model_name=args.model_name, pretrained=True, num_classes=data.num_classes
+        model_name=args.model_name, pretrained=True, num_classes=data.num_classes, outdir=args.outdir
     )
     trainer = get_trainer(args)
 
