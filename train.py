@@ -131,9 +131,9 @@ class SimpleModel(LightningModule):
             model_name=model_name, pretrained=pretrained, num_classes=num_classes
         )
         self.train_loss = nn.CrossEntropyLoss()
-        self.train_acc = Accuracy()
+        self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.val_loss = nn.CrossEntropyLoss()
-        self.val_acc = Accuracy()
+        self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
 
     def forward(self, x):
         return self.model(x)
