@@ -25,7 +25,7 @@ import pytorch_lightning as pl
 
 
 class ArtportalenDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir=IMG_DIR, batch_size=8, size=256):
+    def __init__(self, data_dir, batch_size=8, size=256):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
