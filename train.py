@@ -218,16 +218,21 @@ def get_gpu_settings(
 def get_trainer(args: argparse.Namespace) -> Trainer:
     callbacks = get_basic_callbacks(checkpoint_interval=args.save_interval)
     accelerator, devices, strategy = get_gpu_settings(args.gpu_ids, args.n_gpu)
-    trainer = Trainer(
-        max_epochs=args.epochs,
-        callbacks=callbacks,
-        default_root_dir=args.outdir,
-        accelerator=accelerator,
-        devices=devices,
-        strategy=strategy,
-        logger=True,
-        deterministic=True,
-    )
+
+    trainer_args = {
+        'max_epochs': args.epochs,
+        'callbacks': callbacks,
+        'default_root_dir': args.outdir,
+        'accelerator': accelerator,
+        'devices': devices,
+        'logger': True,
+        'deterministic': True,
+    }
+
+    if strategy is not None:
+        trainer_args['strategy'] = strategy
+
+    trainer = Trainer(**trainer_args)
     return trainer
 
 
