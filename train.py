@@ -179,7 +179,7 @@ class SimpleModel(LightningModule):
         acc = self.val_acc(pred, target)
         self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-        cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]], use_cuda=torch.cuda.is_available())
+        cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
         targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
         grayscale_cam = cam(input_tensor=x, targets=targets)
         # grayscale_cam = grayscale_cam[0, :]
