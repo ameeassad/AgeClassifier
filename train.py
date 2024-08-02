@@ -3,6 +3,7 @@
 import argparse
 import os
 from pprint import pprint
+import numpy as np
 
 import timm
 import torch
@@ -17,9 +18,9 @@ from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from torchvision.datasets import ImageFolder
 
-# from pytorch_grad_cam import GradCAM
-# from pytorch_grad_cam.utils.image import show_cam_on_image
-# from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from dataset import ArtportalenDataModule
 
@@ -136,8 +137,22 @@ class SimpleModel(LightningModule):
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.val_loss = nn.CrossEntropyLoss()
         self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
-        
+        self.gradient = None
         self.outdir = outdir
+    
+    def activations_hook(self, grad):
+        self.gradient = grad
+
+    def get_gradient(self):
+        return self.gradient
+
+    def get_activations(self, x):
+        for name, module in self.model.named_modules():
+            if name == 'layer4':
+                x = module(x)
+                x.register_hook(self.activations_hook)
+                return x
+        return None
 
     def forward(self, x):
         return self.model(x)
@@ -164,12 +179,18 @@ class SimpleModel(LightningModule):
         acc = self.val_acc(pred, target)
         self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-        # Grad-CAM integration
-        # cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]], use_cuda=torch.cuda.is_available())
-        # targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
-        # grayscale_cam = cam(input_tensor=x, targets=targets)
+        cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]], use_cuda=torch.cuda.is_available())
+        targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
+        grayscale_cam = cam(input_tensor=x, targets=targets)
         # grayscale_cam = grayscale_cam[0, :]
         # visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
+        for i in range(len(x)):
+            grayscale_cam_img = grayscale_cam[i]
+            visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
+            img = Image.fromarray((visualization * 255).astype(np.uint8))
+            os.makedirs(self.hparams.outdir, exist_ok=True)
+            img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
+
 
 
     def configure_optimizers(self):
