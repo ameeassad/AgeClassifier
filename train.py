@@ -11,7 +11,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
@@ -31,7 +31,7 @@ MOMENTUM = 0.9  # only when OPT is sgd
 BASE_LR = 0.001
 LR_SCHEDULER = 'step'  # step, multistep, reduce_on_plateau
 LR_DECAY_RATE = 0.1
-LR_STEP_SIZE = 5  # only when LR_SCHEDULER is step
+LR_STEP_SIZE = 10  # only when LR_SCHEDULER is step
 LR_STEP_MILESTONES = [10, 15]  # only when LR_SCHEDULER is multistep
 
 
@@ -207,7 +207,14 @@ def get_basic_callbacks(checkpoint_interval: int = 1) -> list:
         save_top_k=-1,
         every_n_epochs=checkpoint_interval,
     )
-    return [ckpt_callback, lr_callback]
+    early_stop_callback = EarlyStopping(
+        monitor='val/loss',  # Monitored metric
+        min_delta=0.001,      # Minimum change to qualify as an improvement
+        patience=10,         # Number of epochs with no improvement after which training will be stopped
+        verbose=True,
+        mode='min'           # Mode for the monitored metric ('min' or 'max')
+    )
+    return [ckpt_callback, lr_callback, early_stop_callback]
 
 
 def get_gpu_settings(
