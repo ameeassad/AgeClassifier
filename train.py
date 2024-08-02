@@ -171,13 +171,15 @@ class SimpleModel(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, target = batch
-
+        x.requires_grad = True  # Ensure input requires grad
         out = self(x)
         _, pred = out.max(1)
 
         loss = self.val_loss(out, target)
         acc = self.val_acc(pred, target)
         self.log_dict({'val/loss': loss, 'val/acc': acc})
+
+        self.model.eval()
 
         cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
         targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
