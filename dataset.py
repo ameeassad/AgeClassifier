@@ -187,11 +187,14 @@ class EagleDataset(Dataset):
 
 def unnormalize(x, mean, std):
 
-    # unnormalized_x = x[0].cpu().permute(1, 2, 0).numpy()
-    # unnormalized_x = unnormalized_x * self.std.numpy() + self.mean.numpy()
-    # unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
-
     unnormalized_x = x.clone()
-    for t, m, s in zip(unnormalized_x, mean, std):
-        t.mul_(s).add_(m)
+    unnormalized_x = x[0].cpu().permute(1, 2, 0).numpy()
+    unnormalized_x = unnormalized_x * std.numpy() + mean.numpy()
+    unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+
+    # unnormalized_x = x.clone()
+    # for t, m, s in zip(unnormalized_x, mean, std):
+    #     t.mul_(s).add_(m)
+
+    
     return unnormalized_x
