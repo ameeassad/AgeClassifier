@@ -170,37 +170,38 @@ class SimpleModel(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, target = batch
-        x.requires_grad = True  # Ensure input requires grad
-        out = self(x)
-        _, pred = out.max(1)
+        with torch.enable_grad():
+            x, target = batch
+            # x.requires_grad = True  # Ensure input requires grad
+            out = self(x)
+            _, pred = out.max(1)
 
-        loss = self.val_loss(out, target)
-        acc = self.val_acc(pred, target)
-        self.log_dict({'val/loss': loss, 'val/acc': acc})
+            loss = self.val_loss(out, target)
+            acc = self.val_acc(pred, target)
+            self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-        # Print debug information to ensure x requires grad
-        print(f"x.requires_grad: {x.requires_grad}")
-        print(f"Gradients Enabled for Model Parameters:")
-        for name, param in self.model.named_parameters():
-            print(f"{name}: {param.requires_grad}")
+            # Print debug information to ensure x requires grad
+            print(f"x.requires_grad: {x.requires_grad}")
+            print(f"Gradients Enabled for Model Parameters:")
+            for name, param in self.model.named_parameters():
+                print(f"{name}: {param.requires_grad}")
 
-        self.model.eval()
+            self.model.eval()
 
-        cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
-        targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
-        grayscale_cam = cam(input_tensor=x, targets=targets)
-        print(f"grayscale_cam.shape: {grayscale_cam.shape}")
-        # grayscale_cam = grayscale_cam[0, :]
-        # visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
-        for i in range(len(x)):
-            grayscale_cam_img = grayscale_cam[i]
-            visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
-            img = Image.fromarray((visualization * 255).astype(np.uint8))
-            os.makedirs(self.hparams.outdir, exist_ok=True)
-            img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
-        
-        # self.model.train()
+            cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
+            targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
+            grayscale_cam = cam(input_tensor=x, targets=targets)
+            print(f"grayscale_cam.shape: {grayscale_cam.shape}")
+            # grayscale_cam = grayscale_cam[0, :]
+            # visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
+            for i in range(len(x)):
+                grayscale_cam_img = grayscale_cam[i]
+                visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
+                img = Image.fromarray((visualization * 255).astype(np.uint8))
+                os.makedirs(self.hparams.outdir, exist_ok=True)
+                img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
+            
+            # self.model.train()
 
 
     def configure_optimizers(self):
