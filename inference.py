@@ -44,7 +44,7 @@ def get_args():
     parser.add_argument('--batch-size', type=int, default=1, help='Batch size.')
     parser.add_argument('--num-classes', type=int, required=True, help='Number of classes.')
     parser.add_argument('--img-size', type=int, default=224, help='Input size of image.')
-    parser.add_argument('--output-dir', type=str, default='gradcam_outputs', help='Directory to save GradCAM images.')
+    parser.add_argument('--outdir', type=str, default='gradcam_outputs', help='Directory to save GradCAM images.')
     parser.add_argument('--use-wandb', action='store_true', help='Flag to use Wandb for logging.')
     parser.add_argument('--wandb-run-id', type=str, help='Wandb run ID to load the checkpoint from Wandb.')
     parser.add_argument('--annot-dir', type=str, default='annotations', help='Root directory where COCO annotations are')
