@@ -2,6 +2,7 @@
 
 import argparse
 from pprint import pprint
+import yaml
 
 import torch
 from pytorch_lightning import LightningDataModule, LightningModule, Trainer
@@ -12,16 +13,9 @@ from pytorch_lightning import seed_everything
 from dataset import ArtportalenDataModule
 from model import SimpleModel
 
-# solver settings
-OPT = 'adam'  # adam, sgd
-WEIGHT_DECAY = 0.0001
-MOMENTUM = 0.9  # only when OPT is sgd
-BASE_LR = 0.001
-LR_SCHEDULER = 'step'  # step, multistep, reduce_on_plateau
-LR_DECAY_RATE = 0.1
-LR_STEP_SIZE = 10  # only when LR_SCHEDULER is step
-LR_STEP_MILESTONES = [10, 15]  # only when LR_SCHEDULER is multistep
-
+# Load configuration from YAML file
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Train classifier.')
@@ -61,54 +55,6 @@ def get_args() -> argparse.Namespace:
     )
     args = parser.parse_args()
     return args
-
-
-def get_optimizer(parameters) -> torch.optim.Optimizer:
-    if OPT == 'adam':
-        optimizer = torch.optim.Adam(parameters, lr=BASE_LR, weight_decay=WEIGHT_DECAY)
-    elif OPT == 'sgd':
-        optimizer = torch.optim.SGD(
-            parameters, lr=BASE_LR, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM
-        )
-    else:
-        raise NotImplementedError()
-
-    return optimizer
-
-
-def get_lr_scheduler_config(optimizer: torch.optim.Optimizer) -> dict:
-    if LR_SCHEDULER == 'step':
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=LR_STEP_SIZE, gamma=LR_DECAY_RATE
-        )
-        lr_scheduler_config = {
-            'scheduler': scheduler,
-            'interval': 'epoch',
-            'frequency': 1,
-        }
-    elif LR_SCHEDULER == 'multistep':
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=LR_STEP_MILESTONES, gamma=LR_DECAY_RATE
-        )
-        lr_scheduler_config = {
-            'scheduler': scheduler,
-            'interval': 'epoch',
-            'frequency': 1,
-        }
-    elif LR_SCHEDULER == 'reduce_on_plateau':
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='max', factor=0.1, patience=10, threshold=0.0001
-        )
-        lr_scheduler_config = {
-            'scheduler': scheduler,
-            'monitor': 'val/loss',
-            'interval': 'epoch',
-            'frequency': 1,
-        }
-    else:
-        raise NotImplementedError
-
-    return lr_scheduler_config
 
 
 def get_basic_callbacks(checkpoint_interval: int = 1) -> list:

@@ -2,6 +2,7 @@
 
 import os
 import numpy as np
+import yaml
 
 import wandb
 import timm
@@ -17,6 +18,10 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from dataset import ArtportalenDataModule, unnormalize
+
+# Load configuration from YAML file
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
 
 class SimpleModel(LightningModule):
     def __init__(
@@ -101,7 +106,8 @@ class SimpleModel(LightningModule):
             
             # To save all images in batch:
             # for i in range(len(x)):
-            #     grayscale_cam_img = grayscale_cam[i]
+            #     grayscale_cam_img = 
+            # grayscale_cam[i]
             #     visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
             #     img = Image.fromarray((visualization * 255).astype(np.uint8))
             #     os.makedirs(self.hparams.outdir, exist_ok=True)
@@ -114,3 +120,51 @@ class SimpleModel(LightningModule):
         optimizer = get_optimizer(self.parameters())
         lr_scheduler_config = get_lr_scheduler_config(optimizer)
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler_config}
+    
+
+def get_optimizer(parameters) -> torch.optim.Optimizer:
+    if config['OPT'] == 'adam':
+        optimizer = torch.optim.Adam(parameters, lr=config['BASE_LR'], weight_decay=config['WEIGHT_DECAY'])
+    elif config['OPT'] == 'sgd':
+        optimizer = torch.optim.SGD(
+            parameters, lr=config['BASE_LR'], weight_decay=config['WEIGHT_DECAY'], momentum=config['MOMENTUM']
+        )
+    else:
+        raise NotImplementedError()
+
+    return optimizer
+
+
+def get_lr_scheduler_config(optimizer: torch.optim.Optimizer) -> dict:
+    if config['LR_SCHEDULER'] == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=config['LR_STEP_SIZE'], gamma=config['LR_DECAY_RATE']
+        )
+        lr_scheduler_config = {
+            'scheduler': scheduler,
+            'interval': 'epoch',
+            'frequency': 1,
+        }
+    elif config['LR_SCHEDULER'] == 'multistep':
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=config['LR_STEP_MILESTONES'], gamma=config['LR_DECAY_RATE']
+        )
+        lr_scheduler_config = {
+            'scheduler': scheduler,
+            'interval': 'epoch',
+            'frequency': 1,
+        }
+    elif config['LR_SCHEDULER'] == 'reduce_on_plateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='max', factor=0.1, patience=10, threshold=0.0001
+        )
+        lr_scheduler_config = {
+            'scheduler': scheduler,
+            'monitor': 'val/loss',
+            'interval': 'epoch',
+            'frequency': 1,
+        }
+    else:
+        raise NotImplementedError
+
+    return lr_scheduler_config
