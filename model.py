@@ -123,11 +123,11 @@ class SimpleModel(LightningModule):
     
 
 def get_optimizer(parameters) -> torch.optim.Optimizer:
-    if config['OPT'] == 'adam':
-        optimizer = torch.optim.Adam(parameters, lr=config['BASE_LR'], weight_decay=config['WEIGHT_DECAY'])
-    elif config['OPT'] == 'sgd':
+    if config['solver']['OPT'] == 'adam':
+        optimizer = torch.optim.Adam(parameters, lr=config['solver']['BASE_LR'], weight_decay=config['solver']['WEIGHT_DECAY'])
+    elif config['solver']['OPT'] == 'sgd':
         optimizer = torch.optim.SGD(
-            parameters, lr=config['BASE_LR'], weight_decay=config['WEIGHT_DECAY'], momentum=config['MOMENTUM']
+            parameters, lr=config['solver']['BASE_LR'], weight_decay=config['solver']['WEIGHT_DECAY'], momentum=config['solver']['MOMENTUM']
         )
     else:
         raise NotImplementedError()
@@ -136,25 +136,25 @@ def get_optimizer(parameters) -> torch.optim.Optimizer:
 
 
 def get_lr_scheduler_config(optimizer: torch.optim.Optimizer) -> dict:
-    if config['LR_SCHEDULER'] == 'step':
+    if config['solver']['LR_SCHEDULER'] == 'step':
         scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=config['LR_STEP_SIZE'], gamma=config['LR_DECAY_RATE']
+            optimizer, step_size=config['solver']['LR_STEP_SIZE'], gamma=config['solver']['LR_DECAY_RATE']
         )
         lr_scheduler_config = {
             'scheduler': scheduler,
             'interval': 'epoch',
             'frequency': 1,
         }
-    elif config['LR_SCHEDULER'] == 'multistep':
+    elif config['solver']['LR_SCHEDULER'] == 'multistep':
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=config['LR_STEP_MILESTONES'], gamma=config['LR_DECAY_RATE']
+            optimizer, milestones=config['solver']['LR_STEP_MILESTONES'], gamma=config['solver']['LR_DECAY_RATE']
         )
         lr_scheduler_config = {
             'scheduler': scheduler,
             'interval': 'epoch',
             'frequency': 1,
         }
-    elif config['LR_SCHEDULER'] == 'reduce_on_plateau':
+    elif config['solver']['LR_SCHEDULER'] == 'reduce_on_plateau':
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode='max', factor=0.1, patience=10, threshold=0.0001
         )
