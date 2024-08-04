@@ -179,6 +179,11 @@ class SimpleModel(LightningModule):
         acc = self.val_acc(pred, target)
         self.log_dict({'val/loss': loss, 'val/acc': acc})
 
+        # Print debug information to ensure x requires grad
+        print(f"x.requires_grad: {x.requires_grad}")
+        for param in self.model.parameters():
+            print(f"param.requires_grad: {param.requires_grad}")
+
         self.model.eval()
 
         cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
@@ -192,7 +197,8 @@ class SimpleModel(LightningModule):
             img = Image.fromarray((visualization * 255).astype(np.uint8))
             os.makedirs(self.hparams.outdir, exist_ok=True)
             img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
-
+        
+        # self.model.train()
 
 
     def configure_optimizers(self):
