@@ -186,15 +186,10 @@ class EagleDataset(Dataset):
     
 
 def unnormalize(x, mean, std):
-
-    unnormalized_x = x.clone()
-    unnormalized_x = x[0].cpu().permute(1, 2, 0).numpy()
-    unnormalized_x = unnormalized_x * std.numpy() + mean.numpy()
-    unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
-
-    # unnormalized_x = x.clone()
-    # for t, m, s in zip(unnormalized_x, mean, std):
-    #     t.mul_(s).add_(m)
-
-    
-    return unnormalized_x
+    if x.dim() == 3:  # Ensure the tensor has 3 dimensions
+        unnormalized_x = x.clone()
+        for t, m, s in zip(unnormalized_x, mean, std):
+            t.mul_(s).add_(m)
+        return unnormalized_x
+    else:
+        raise ValueError(f"Expected input tensor to have 3 dimensions, but got {x.dim()} dimensions.")
