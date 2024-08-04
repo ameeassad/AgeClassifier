@@ -5,6 +5,7 @@ import os
 from pprint import pprint
 import numpy as np
 
+import wandb
 import timm
 import torch
 import torch.nn as nn
@@ -179,7 +180,7 @@ class SimpleModel(LightningModule):
             acc = self.val_acc(pred, target)
             self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-            self.model.eval()
+            # self.model.eval() # handled by pytorch lightning
 
             cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
             targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
@@ -187,6 +188,13 @@ class SimpleModel(LightningModule):
             grayscale_cam = grayscale_cam[0, :]
             visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
             img = Image.fromarray((visualization * 255).astype(np.uint8))
+
+             # Log image to Wandb
+            wandb_img = wandb.Image(visualization, caption=f"GradCAM Batch {batch_idx} Image 0")
+            self.logger.experiment.log({"GradCAM Images": wandb_img})
+
+            
+            # save locally
             os.makedirs(self.outdir, exist_ok=True)
             img.save(os.path.join(self.outdir, f'cam_image_val_batch{batch_idx}_img0.png'))
             
@@ -198,7 +206,7 @@ class SimpleModel(LightningModule):
             #     os.makedirs(self.hparams.outdir, exist_ok=True)
             #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
             
-            self.model.train()
+            # self.model.train()
 
 
     def configure_optimizers(self):
