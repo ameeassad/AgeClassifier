@@ -53,6 +53,10 @@ class ArtportalenDataModule(pl.LightningDataModule):
         # download, split, etc.
         pass
 
+    def setup_for_training(self, image_dir):
+        pass
+
+
     def setup_from_coco(self, train_annot, val_annot, stage=None):
         # Load COCO annotations
         with open(train_annot, 'r') as f:
