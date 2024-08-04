@@ -8,6 +8,7 @@ from IPython.display import display
 from PIL import Image
 import cv2
 
+import torch
 from torch.utils.data import Dataset, DataLoader, random_split, Subset
 from torchvision import transforms
 from torchvision.transforms import (
@@ -186,6 +187,12 @@ class EagleDataset(Dataset):
     
 
 def unnormalize(x, mean, std):
+    mean = (mean, mean, mean) if isinstance(mean, float) else tuple(mean)
+    std = (std, std, std) if isinstance(std, float) else tuple(std)
+
+    mean = torch.tensor(mean)
+    std = torch.tensor(std)
+    
     if x.dim() == 3:  # Ensure the tensor has 3 dimensions
         unnormalized_x = x.clone()
         for t, m, s in zip(unnormalized_x, mean, std):
@@ -193,3 +200,4 @@ def unnormalize(x, mean, std):
         return unnormalized_x
     else:
         raise ValueError(f"Expected input tensor to have 3 dimensions, but got {x.dim()} dimensions.")
+

@@ -7,6 +7,10 @@ checkpoint_interval: 1
 local_checkpoint_interval: 10
 max_epochs: 100
 
+transforms:
+  mean: 0.5
+  std: 0.5
+
 early_stopping:
   monitor: val/loss
   min_delta: 0.001

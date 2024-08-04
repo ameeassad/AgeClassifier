@@ -84,7 +84,7 @@ class SimpleModel(LightningModule):
 
             # self.model.eval() # handled by pytorch lightning
 
-            unnormalized_x = unnormalize(x[0].cpu(), 0.5, 0.5).permute(1, 2, 0).numpy()
+            unnormalized_x = unnormalize(x[0].cpu(), config['transforms']['mean'], config['transforms']['std']).permute(1, 2, 0).numpy()
             unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
 
 

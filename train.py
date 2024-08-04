@@ -137,11 +137,14 @@ if __name__ == '__main__':
     data = ArtportalenDataModule(data_dir=args.dataset, batch_size=args.batch_size, size=args.img_size)
     data.setup_from_coco(args.annot_dir + '/modified_val_annotations.json', args.annot_dir + '/modified_val_annotations.json')
 
-    model = SimpleModel(
-        model_name=args.model_name, pretrained=True, num_classes=data.num_classes, outdir=args.outdir
-    )
+    
     if args.checkpoint:
-        model.load_state_dict(torch.load(args.checkpoint)["state_dict"])
+        model = SimpleModel(model_name=args.model_name, pretrained=False, num_classes=data.num_classes, outdir=args.outdir)
+        checkpoint = torch.load(args.checkpoint)
+        model.load_state_dict(checkpoint["state_dict"])
+    else:
+        model = SimpleModel(model_name=args.model_name, pretrained=True, num_classes=data.num_classes, outdir=args.outdir)
+
 
     trainer = get_trainer(args)
 
