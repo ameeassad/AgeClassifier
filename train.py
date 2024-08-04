@@ -181,14 +181,16 @@ class SimpleModel(LightningModule):
 
         # Print debug information to ensure x requires grad
         print(f"x.requires_grad: {x.requires_grad}")
-        for param in self.model.parameters():
-            print(f"param.requires_grad: {param.requires_grad}")
+        print(f"Gradients Enabled for Model Parameters:")
+        for name, param in self.model.named_parameters():
+            print(f"{name}: {param.requires_grad}")
 
         self.model.eval()
 
         cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
         targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
         grayscale_cam = cam(input_tensor=x, targets=targets)
+        print(f"grayscale_cam.shape: {grayscale_cam.shape}")
         # grayscale_cam = grayscale_cam[0, :]
         # visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
         for i in range(len(x)):
