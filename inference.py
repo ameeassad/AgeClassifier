@@ -17,8 +17,8 @@ from torch.utils.data import DataLoader
 from model import SimpleModel
 from dataset import ArtportalenDataModule, unnormalize
 
-def save_gradcam(model, dataloader, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
+def save_gradcam(model, dataloader, outdir):
+    os.makedirs(outdir, exist_ok=True)
     for batch_idx, (images, targets) in enumerate(dataloader):
         images.requires_grad = True
         cam = GradCAM(model=model, target_layers=[model.model.layer4[-1]])
@@ -29,7 +29,7 @@ def save_gradcam(model, dataloader, output_dir):
             unnormalized_img = unnormalize(images[i], model.mean, model.std)
             visualization = show_cam_on_image(unnormalized_img, grayscale_cam[i], use_rgb=True)
             img = Image.fromarray((visualization * 255).astype(np.uint8))
-            img.save(os.path.join(output_dir, f'cam_image_inference_batch{batch_idx}_img{i}.png'))
+            img.save(os.path.join(outdir, f'cam_image_inference_batch{batch_idx}_img{i}.png'))
             
             # Optionally log to Wandb
             if wandb.run:
@@ -76,9 +76,9 @@ def main():
     model.eval()
 
 
-    save_gradcam(model, dataloader, args.output_dir)
+    save_gradcam(model, dataloader, args.outdir)
 
-    print(f"GradCAM visualizations saved to {args.output_dir}")
+    print(f"GradCAM visualizations saved to {args.outdir}")
 
 if __name__ == '__main__':
     main()
