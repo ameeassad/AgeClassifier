@@ -56,6 +56,9 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         '--annot-dir', type=str, default='annotations', help='Root directory where COCO annotations are'
     )
+    parser.add_argument(
+        '--checkpoint', type=str, help='Path to checkpoint if loading model'
+    )
     args = parser.parse_args()
     return args
 
@@ -191,6 +194,9 @@ if __name__ == '__main__':
     model = SimpleModel(
         model_name=args.model_name, pretrained=True, num_classes=data.num_classes, outdir=args.outdir
     )
+    if args.checkpoint:
+        model.load_state_dict(torch.load(args.checkpoint)["state_dict"])
+
     trainer = get_trainer(args)
 
     print('Args:')
