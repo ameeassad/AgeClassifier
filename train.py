@@ -23,7 +23,7 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-from dataset import ArtportalenDataModule
+from dataset import ArtportalenDataModule, unnormalize
 
 # solver settings
 OPT = 'adam'  # adam, sgd
@@ -182,11 +182,15 @@ class SimpleModel(LightningModule):
 
             # self.model.eval() # handled by pytorch lightning
 
+            unnormalized_x = unnormalize(x[0].cpu(), 0.5, 0.5).permute(1, 2, 0).numpy()
+            unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+
+
             cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
             targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
             grayscale_cam = cam(input_tensor=x, targets=targets)
             grayscale_cam = grayscale_cam[0, :]
-            visualization = show_cam_on_image(x[0].cpu().numpy().transpose(1, 2, 0), grayscale_cam, use_rgb=True)
+            visualization = show_cam_on_image(unnormalized_x, grayscale_cam, use_rgb=True)
             img = Image.fromarray((visualization * 255).astype(np.uint8))
 
              # Log image to Wandb

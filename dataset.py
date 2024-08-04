@@ -25,11 +25,13 @@ import pytorch_lightning as pl
 
 
 class ArtportalenDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir, batch_size=8, size=256):
+    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.size = size
+        self.mean = mean
+        self.std = std
 
         # transformations
         self.train_transforms = Compose([
@@ -37,14 +39,14 @@ class ArtportalenDataModule(pl.LightningDataModule):
             # Pad((self.size - 1, self.size - 1), padding_mode='constant'),
             RandomHorizontalFlip(),
             ToTensor(),
-            Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            Normalize((mean, mean, mean), (std, std, std)),
         ])
 
         self.val_transforms = Compose([
             # Resize(self.size),
             # Pad((self.size - 1, self.size - 1), padding_mode='constant'),
             ToTensor(),
-            Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            Normalize((mean, mean, mean), (std, std, std)),
         ])
 
     def prepare_data(self):
@@ -178,3 +180,14 @@ class EagleDataset(Dataset):
 
         return padded_image
     
+
+def unnormalize(x, mean, std):
+
+    # unnormalized_x = x[0].cpu().permute(1, 2, 0).numpy()
+    # unnormalized_x = unnormalized_x * self.std.numpy() + self.mean.numpy()
+    # unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+
+    unnormalized_x = x.clone()
+    for t, m, s in zip(unnormalized_x, mean, std):
+        t.mul_(s).add_(m)
+    return unnormalized_x
