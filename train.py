@@ -118,7 +118,7 @@ if __name__ == '__main__':
         model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
 
 
-    trainer = get_trainer(args)
+    trainer = get_trainer(config)
 
     print('Args:')
     pprint(args.__dict__)
