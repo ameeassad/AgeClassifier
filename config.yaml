@@ -8,14 +8,14 @@ outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
 dataset: /proj/nobackup/aiforeagles/artportalen/data
 
 model_name: resnet152
-checkpoint: None
+checkpoint: 
 batch_size: 32
 img_size: 256
 epochs: 100
 save_interval: 10
 n_gpu: 1
 num_workers: 12
-gpu_ids: None
+gpu_ids: 
 seed: 42
 
 
