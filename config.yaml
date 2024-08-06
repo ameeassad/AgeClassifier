@@ -3,7 +3,6 @@ notes:
 use_wandb: True
 wandb_entity: winniethepooh
 
-checkpoint_interval: 1
 local_checkpoint_interval: 10
 max_epochs: 100
 
@@ -30,9 +29,9 @@ solver:
 
 model: resnet152
 
-train_dataloader:
-  batch_size: 32
-  num_workers: 4
-val_dataloader:
-  batch_size: 32
-  num_workers: 4
+# train_dataloader:
+#   batch_size: 32
+#   num_workers: 4
+# val_dataloader:
+#   batch_size: 32
+#   num_workers: 4

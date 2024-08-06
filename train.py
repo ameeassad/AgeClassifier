@@ -68,11 +68,11 @@ def get_basic_callbacks(checkpoint_interval: int = 1) -> list:
         save_last=True,
     )
     early_stop_callback = EarlyStopping(
-        monitor='val/loss',  # Monitored metric
-        min_delta=0.001,      # Minimum change to qualify as an improvement
-        patience=10,         # Number of epochs with no improvement after which training will be stopped
-        verbose=True,
-        mode='min'           # Mode for the monitored metric ('min' or 'max')
+        monitor=config['early_stopping']['monitor'],  # Monitored metric
+        min_delta=config['early_stopping']['min_delta'],      # Minimum change to qualify as an improvement
+        patience=config['early_stopping']['patience'],         # Number of epochs with no improvement after which training will be stopped
+        verbose=config['early_stopping']['verbose'],
+        mode=config['early_stopping']['mode']           # Mode for the monitored metric ('min' or 'max')
     )
     return [ckpt_callback, lr_callback, early_stop_callback]
 
@@ -111,7 +111,10 @@ def get_trainer(args: argparse.Namespace) -> Trainer:
     callbacks = get_basic_callbacks(checkpoint_interval=args.save_interval)
     accelerator, devices, strategy = get_gpu_settings(args.gpu_ids, args.n_gpu)
 
-    wandb_logger = WandbLogger(project='age-classifier')
+    if config['use_wandb']:
+        wandb_logger = WandbLogger(project=config['project_name'], log_model=True)
+    else:
+        wandb_logger = None
 
     trainer_args = {
         'max_epochs': args.epochs,
