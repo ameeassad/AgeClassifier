@@ -2,3 +2,4 @@ results/
 .DS_Store
 age-classifier/
 gradcam_outputs/
+checkpoints/
