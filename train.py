@@ -74,7 +74,7 @@ def get_gpu_settings(
 
 
 def get_trainer(config) -> Trainer:
-    callbacks = get_basic_callbacks(checkpoint_interval=config['save_interval'])
+    callbacks = get_basic_callbacks(checkpoint_interval=int(config['save_interval']))
     accelerator, devices, strategy = get_gpu_settings(config['gpu_ids'], config['n_gpu'])
 
     if config['use_wandb']:
