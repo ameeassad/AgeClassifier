@@ -13,45 +13,11 @@ from pytorch_lightning import seed_everything
 from dataset import ArtportalenDataModule
 from model import SimpleModel
 
-# Load configuration from YAML file
-with open('config.yaml', 'r') as file:
-    config = yaml.safe_load(file)
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Train classifier.')
     parser.add_argument(
-        '--dataset', '-d', type=str, required=True, help='Root directory of dataset'
-    )
-    parser.add_argument(
-        '--outdir', '-o', type=str, default='results', help='Output directory'
-    )
-    parser.add_argument(
-        '--model-name', '-m', type=str, default='resnet18', help='Model name (timm)'
-    )
-    parser.add_argument(
-        '--img-size', '-i', type=int, default=112, help='Input size of image'
-    )
-    parser.add_argument(
-        '--epochs', '-e', type=int, default=100, help='Number of training epochs'
-    )
-    parser.add_argument(
-        '--save-interval', '-s', type=int, default=10, help='Save interval (epoch)'
-    )
-    parser.add_argument('--batch-size', '-b', type=int, default=8, help='Batch size')
-    parser.add_argument(
-        '--num-workers', '-w', type=int, default=12, help='Number of workers'
-    )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        '--gpu-ids', type=int, default=None, nargs='+', help='GPU IDs to use'
-    )
-    group.add_argument('--n-gpu', type=int, default=None, help='Number of GPUs')
-    parser.add_argument('--seed', type=int, default=42, help='Seed')
-    parser.add_argument(
-        '--annot-dir', type=str, default='annotations', help='Root directory where COCO annotations are'
-    )
-    parser.add_argument(
-        '--checkpoint', type=str, help='Path to checkpoint if loading model'
+        '--config', type=str, required=True, default="./config.yaml", help='Path to config yaml file'
     )
     args = parser.parse_args()
     return args
@@ -107,9 +73,9 @@ def get_gpu_settings(
     return "gpu", devices, strategy
 
 
-def get_trainer(args: argparse.Namespace) -> Trainer:
-    callbacks = get_basic_callbacks(checkpoint_interval=args.save_interval)
-    accelerator, devices, strategy = get_gpu_settings(args.gpu_ids, args.n_gpu)
+def get_trainer(config) -> Trainer:
+    callbacks = get_basic_callbacks(checkpoint_interval=config['save_interval'])
+    accelerator, devices, strategy = get_gpu_settings(config['gpu_ids'], config['n_gpu'])
 
     if config['use_wandb']:
         wandb_logger = WandbLogger(project=config['project_name'], log_model=True)
@@ -117,9 +83,9 @@ def get_trainer(args: argparse.Namespace) -> Trainer:
         wandb_logger = None
 
     trainer_args = {
-        'max_epochs': args.epochs,
+        'max_epochs': config['epochs'],
         'callbacks': callbacks,
-        'default_root_dir': args.outdir,
+        'default_root_dir': config['outdir'],
         'accelerator': accelerator,
         'devices': devices,
         'logger': wandb_logger,
@@ -135,24 +101,29 @@ def get_trainer(args: argparse.Namespace) -> Trainer:
 
 if __name__ == '__main__':
     args = get_args()
-    seed_everything(args.seed, workers=True)
+    with open(args.config, 'r') as file:
+        config = yaml.safe_load(file)
 
-    data = ArtportalenDataModule(data_dir=args.dataset, batch_size=args.batch_size, size=args.img_size)
-    data.setup_from_coco(args.annot_dir + '/modified_val_annotations.json', args.annot_dir + '/modified_val_annotations.json')
+    seed_everything(config['seed'], workers=True)
+
+    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'])
+    data.setup_from_coco(config['annot_dir'] + '/modified_val_annotations.json', config['annot_dir'] + '/modified_val_annotations.json')
 
     
-    if args.checkpoint:
-        model = SimpleModel(model_name=args.model_name, pretrained=False, num_classes=data.num_classes, outdir=args.outdir)
-        checkpoint = torch.load(args.checkpoint)
+    if config['checkpoint']:
+        model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
+        checkpoint = torch.load(config['checkpoint'])
         model.load_state_dict(checkpoint["state_dict"])
     else:
-        model = SimpleModel(model_name=args.model_name, pretrained=True, num_classes=data.num_classes, outdir=args.outdir)
+        model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
 
 
     trainer = get_trainer(args)
 
     print('Args:')
     pprint(args.__dict__)
+    print('configuration:')
+    pprint(config)
 
     
     trainer.fit(model, data)

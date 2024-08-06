@@ -3,6 +3,22 @@ notes:
 use_wandb: True
 wandb_entity: winniethepooh
 
+annot_dir: /proj/nobackup/aiforeagles/AgeClassifier/annot
+outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
+dataset: /proj/nobackup/aiforeagles/artportalen/data
+
+model_name: resnet152
+checkpoint: None
+batch_size: 32
+img_size: 256
+epochs: 100
+save_interval: 10
+n_gpu: 1
+num_workers: 12
+gpu_ids: None
+seed: 42
+
+
 local_checkpoint_interval: 10
 max_epochs: 100
 
