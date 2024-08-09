@@ -3,3 +3,7 @@ results/
 age-classifier/
 gradcam_outputs/
 checkpoints/
+lightning_logs/
+yolov8x-seg.pt
+results_pred/
+testing/

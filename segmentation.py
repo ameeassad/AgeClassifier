@@ -2,8 +2,8 @@ import json, yaml
 from collections import OrderedDict
 from pycocotools import mask as cocomask
 from pycocotools import coco as cocoapi
-
 from ultralytics import YOLO, utils
+
 import random
 import cv2
 import os
@@ -26,46 +26,72 @@ import pycocotools.mask as mask_util
 
 from shapely.geometry import Polygon
 
-IMAGE_DIR = '/content/drive/MyDrive/artportalen_goeag'
-YOLO_MODEL_PATH = 'content/yolov8x-seg.pt'
+class NumpyEncoder(json.JSONEncoder):
+    """
+    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    Special json encoder for numpy types
+    """
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
-file_path_val = '/content/drive/MyDrive/artportalen_goleag_labels/val.csv'
-file_path_train = '/content/drive/MyDrive/artportalen_goleag_labels/train.csv'
-file_path_test = '/content/drive/MyDrive/artportalen_goleag_labels/test.csv'
-
-class COCOArtportalen():
-    def __init__(self, directory_path):
+class COCOBuilder():
+    def __init__(self, directory_path, testing=False):
         self.IMAGE_DIR = directory_path
         self.info = {
                 "year" : 2024,
-                "version" : "1.0",
-                "description" : "artportalen eagles",
-                "contributor" : "Amee Assad",
+                "version" : 1.0,
+                "description" : "",
+                "contributor" : "",
                 "url" : "",
-                "date_created" : "2024"
+                "date_created" : ""
         }
         self.images = []
         self.categories = []
         self.annotations = []
+        self.testing = testing
 
-        self.label_mapping = {
-                '1K': 1,
-                '2K': 2,
-                '3K': 3,
-                '4K': 4,
-                '5K_plus': 5,
-                 }
+        # self.label_mapping = {
+        #         '1K': 0,
+        #         '2K': 1,
+        #         '3K': 2,
+        #         '4K': 3,
+        #         '5K_plus': 4,
+        #          }
         self.seg_count = 0
 
-    def setup(self, file_path_train, file_path_val,file_path_test, choice):
+    def setup(self, choice, file_path_train=None, file_path_val=None,file_path_test=None):
 
-        self.df_val = pd.read_csv(file_path_val)
-        self.df_train = pd.read_csv(file_path_train)
-        self.df_test = pd.read_csv(file_path_test)
+        if file_path_val:
+            self.df_val = pd.read_csv(file_path_val)
+        if file_path_train: 
+            self.df_train = pd.read_csv(file_path_train)
+        if file_path_test:
+            self.df_test = pd.read_csv(file_path_test)
 
-        self.model = YOLO(YOLO_MODEL_PATH)
+        self.model = YOLO('content/yolov8x-seg.pt')
 
         self.set_df(choice)
+
+    def setup_testing(self, image_dir=None):
+        if image_dir:
+            self.IMAGE_DIR = image_dir
+
+        self.model = YOLO('testing/yolov8x-seg.pt')
+        
+        image_files = [f for f in os.listdir(self.IMAGE_DIR) if os.path.isfile(os.path.join(self.IMAGE_DIR, f))]
+
+        test_df = pd.DataFrame({'fileid': range(len(image_files)), 'imageID': image_files})
+        print(f"test: {len(test_df)}")
+
+        self.df = test_df
+        self.df['categoryid'] = 1 # give any class
+
 
     def set_df(self, choice):
         if choice == "example":
@@ -91,18 +117,25 @@ class COCOArtportalen():
         image["id"] = row.fileid
         image["file_name"] = str(row.imageID)
 
-        image["activity"] = str(row.activity)
-        image["date_captured"] = str(row.date)
-        image["photographer"] = str(row.Reporter)
+        # image["activity"] = str(row.activity)
+        # image["date_captured"] = str(row.date)
+        # image["photographer"] = str(row.Reporter)
 
         return image
 
     def category(self, row):
+        if self.testing:
+            category = {}
+            category["supercategory"] = "test"
+            category["id"] = 0
+            category["name"] = "unknown"
+            return category
         category = {}
         category["supercategory"] = row.species
         category["id"] = row.categoryid
         category["name"] = row.age_class
         return category
+    
 
     def get_segmentations(self, mask, image):
         mask = np.array(mask, dtype=np.uint8)
@@ -164,7 +197,7 @@ class COCOArtportalen():
         temp_annotations = []
         image_file = str(row.imageID)
 
-        image = Image.open(os.path.join(IMAGE_DIR, image_file))
+        image = Image.open(os.path.join(self.IMAGE_DIR, image_file))
         W, H = image.size
         results = self.model(image)
         for result in results:
@@ -217,7 +250,7 @@ class COCOArtportalen():
         for row in catdf.itertuples():
             self.categories.append(self.category(row))
 
-    def create_coco_format_json(self, save_json_path = 'examplecoco.json'):
+    def create_coco_format_json(self, save_json_path = 'testcoco.json'):
         data_coco = {}
         data_coco["info"] = self.info
         data_coco["images"] = self.images
@@ -225,26 +258,9 @@ class COCOArtportalen():
         data_coco["annotations"] = self.annotations
         json.dump(data_coco, open(save_json_path, 'w'), indent=4, cls=NumpyEncoder)
 
-class NumpyEncoder(json.JSONEncoder):
-    """
-    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
-    Special json encoder for numpy types
-    """
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
-    
-def main():
-    coco = COCOArtportalen(IMAGE_DIR)
-    coco.setup(file_path_train, file_path_val, file_path_test, "val")
-    coco.fill_coco()
-
-    coco.create_coco_format_json("instances_val.json")
 
 if __name__ == '__main__':
-    main()
+    IMAGE_DIR = '/content/drive/MyDrive/artportalen_goeag'
+    model = YOLO('content/yolov8x-seg.pt')
+    coco = COCOBuilder(IMAGE_DIR, model)
+    coco.setup_testing()

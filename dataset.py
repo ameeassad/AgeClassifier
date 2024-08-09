@@ -24,15 +24,18 @@ from torchvision.transforms import (
 from torchvision.transforms.functional import resize, pad
 import pytorch_lightning as pl
 
+from segmentation import COCOBuilder
+
 
 class ArtportalenDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5):
+    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5, test=False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.size = size
         self.mean = mean
         self.std = std
+        self.test = test
 
         # transformations
         self.train_transforms = Compose([
@@ -54,9 +57,28 @@ class ArtportalenDataModule(pl.LightningDataModule):
         # download, split, etc.
         pass
 
-    def setup_for_training(self, image_dir):
-        pass
+    def prepare_testing_data(self, image_dir):
 
+        coco = COCOBuilder("./testing/images", testing=True)
+        coco.setup_testing()
+        coco.fill_coco()
+        coco.create_coco_format_json("testing/coco_training.json")
+
+        self.setup_testing("testing/coco_training.json") 
+
+    def setup_testing(self, test_annot):
+        # Load COCO annotations
+        with open(test_annot, 'r') as f:
+            test_data = json.load(f)
+        # Initialize COCO objects
+        test_coco = COCO(test_annot)
+        # Convert annotations to DataFrame
+        test_df = self.coco_to_dataframe(test_coco)
+        print(f"Test: {len(test_df)}")
+        self.num_classes = 5
+        print(f"Number of classes: {self.num_classes}")
+        self.train_dataset = EagleDataset(test_df, self.data_dir, self.train_transforms)
+        self.val_dataset = EagleDataset(test_df, self.data_dir, self.val_transforms, test=self.test)
 
     def setup_from_coco(self, train_annot, val_annot, stage=None):
         # Load COCO annotations
@@ -73,7 +95,6 @@ class ArtportalenDataModule(pl.LightningDataModule):
         train_df = self.coco_to_dataframe(train_coco)
         val_df = self.coco_to_dataframe(val_coco)
 
-        # Printing sizes
         print(f"Train: {len(train_df)} Val: {len(val_df)}")
 
         self.train_dataset = EagleDataset(train_df, self.data_dir, self.train_transforms)
@@ -90,9 +111,14 @@ class ArtportalenDataModule(pl.LightningDataModule):
         data = []
         for ann in coco.anns.values():
             img_info = coco.loadImgs(ann['image_id'])[0]
+
+            file_name = img_info['file_name']
+            if '.' not in file_name:
+                file_name += '.jpg'
+
             data.append({
                 'image_id': ann['image_id'],
-                'file_name': img_info['file_name'] + '.jpg',
+                'file_name': file_name,
                 'height': img_info['height'],
                 'width': img_info['width'],
                 'category_id': ann['category_id'],
@@ -109,14 +135,18 @@ class ArtportalenDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=2)
+    
+    def test_dataloader(self):
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
 
 
 class EagleDataset(Dataset):
-    def __init__(self, dataframe, data_dir, transform=None, size=256):
+    def __init__(self, dataframe, data_dir, transform=None, size=256, test=False):
         self.dataframe = dataframe
         self.data_dir = data_dir
         self.transform = transform
         self.size = size
+        self.test = test
 
     def __len__(self):
         return len(self.dataframe)
@@ -125,6 +155,8 @@ class EagleDataset(Dataset):
         img_info = self.dataframe.iloc[idx]
         img_path = os.path.join(self.data_dir, img_info['file_name'])
         label = img_info['category_id'] - 1 
+        if self.test:
+            label = img_info['category_id']
 
         image = Image.open(img_path).convert("RGB")
 

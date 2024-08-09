@@ -73,7 +73,48 @@ class SimpleModel(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        with torch.enable_grad():
+        if config['use_gradcam']:
+            with torch.enable_grad():
+                x, target = batch
+                out = self(x)
+                _, pred = out.max(1)
+
+                loss = self.val_loss(out, target)
+                acc = self.val_acc(pred, target)
+                self.log_dict({'val/loss': loss, 'val/acc': acc})
+
+                unnormalized_x = unnormalize(x[0].cpu(), config['transforms']['mean'], config['transforms']['std']).permute(1, 2, 0).numpy()
+                unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+
+
+                cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
+                targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
+                grayscale_cam = cam(input_tensor=x, targets=targets)
+                grayscale_cam = grayscale_cam[0, :]
+                visualization = show_cam_on_image(unnormalized_x, grayscale_cam, use_rgb=True)
+                img = Image.fromarray((visualization * 255).astype(np.uint8))
+
+                # Log image to 
+                if config['use_wandb']:
+                    wandb_img = wandb.Image(visualization, caption=f"GradCAM Batch {batch_idx} Image 0")
+                    self.logger.experiment.log({"GradCAM Images": wandb_img})
+
+                
+                # save locally
+                os.makedirs(self.outdir, exist_ok=True)
+                img.save(os.path.join(self.outdir, f'cam_image_val_batch{batch_idx}_img0.png'))
+                
+                # To save all images in batch:
+                # for i in range(len(x)):
+                #     grayscale_cam_img = 
+                # grayscale_cam[i]
+                #     visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
+                #     img = Image.fromarray((visualization * 255).astype(np.uint8))
+                #     os.makedirs(self.hparams.outdir, exist_ok=True)
+                #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
+                
+                # self.model.train()
+        else:
             x, target = batch
             out = self(x)
             _, pred = out.max(1)
@@ -82,40 +123,23 @@ class SimpleModel(LightningModule):
             acc = self.val_acc(pred, target)
             self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-            # self.model.eval() # handled by pytorch lightning
+    def test_step(self, batch, batch_idx):
+            x, target = batch
 
-            unnormalized_x = unnormalize(x[0].cpu(), config['transforms']['mean'], config['transforms']['std']).permute(1, 2, 0).numpy()
-            unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+            x = x.to(torch.device('cpu'))
+            target = target.to(torch.device('cpu'))
 
+            x.requires_grad = True
+        
+            out = self(x)
 
-            cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
-            targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
-            grayscale_cam = cam(input_tensor=x, targets=targets)
-            grayscale_cam = grayscale_cam[0, :]
-            visualization = show_cam_on_image(unnormalized_x, grayscale_cam, use_rgb=True)
-            img = Image.fromarray((visualization * 255).astype(np.uint8))
+            _, pred = out.max(1)
+            if pred.numel() == 1:
+                print(f"BATCH {batch_idx} PREDICTION: {pred.item()}")
+            else:
+                print(f"BATCH {batch_idx} PREDICTIONS: {pred.tolist()}")
 
-             # Log image to Wandb
-            wandb_img = wandb.Image(visualization, caption=f"GradCAM Batch {batch_idx} Image 0")
-            self.logger.experiment.log({"GradCAM Images": wandb_img})
-
-            
-            # save locally
-            os.makedirs(self.outdir, exist_ok=True)
-            img.save(os.path.join(self.outdir, f'cam_image_val_batch{batch_idx}_img0.png'))
-            
-            # To save all images in batch:
-            # for i in range(len(x)):
-            #     grayscale_cam_img = 
-            # grayscale_cam[i]
-            #     visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
-            #     img = Image.fromarray((visualization * 255).astype(np.uint8))
-            #     os.makedirs(self.hparams.outdir, exist_ok=True)
-            #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
-            
-            # self.model.train()
-
-
+    
     def configure_optimizers(self):
         optimizer = get_optimizer(self.parameters())
         lr_scheduler_config = get_lr_scheduler_config(optimizer)

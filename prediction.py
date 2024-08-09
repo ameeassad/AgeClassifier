@@ -14,7 +14,7 @@ from dataset import ArtportalenDataModule
 
 
 def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Train classifier.')
+    parser = argparse.ArgumentParser(description='Inference with GradCAM visualisation.')
     parser.add_argument(
         '--config', type=str, required=True, default="./config.yaml", help='Path to config yaml file'
     )
@@ -42,52 +42,16 @@ def get_basic_callbacks(checkpoint_interval: int = 1) -> list:
     return [ckpt_callback, lr_callback, early_stop_callback]
 
 
-def get_gpu_settings(
-    gpu_ids: list[int], n_gpu: int
-) -> tuple[str, int | list[int] | None, str | None]:
-    """Get gpu settings for pytorch-lightning trainer:
-    https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#trainer-flags
-
-    Args:
-        gpu_ids (list[int])
-        n_gpu (int)
-
-    Returns:
-        tuple[str, int, str]: accelerator, devices, strategy
-    """
-    if not torch.cuda.is_available():
-        return "cpu", None, None
-
-    if gpu_ids is not None:
-        devices = gpu_ids
-        strategy = "ddp" if len(gpu_ids) > 1 else None
-    elif n_gpu is not None:
-        # int
-        devices = n_gpu
-        strategy = "ddp" if n_gpu > 1 else None
-    else:
-        devices = 1
-        strategy = None
-
-    return "gpu", devices, strategy
-
 
 def get_trainer(config) -> Trainer:
-    callbacks = get_basic_callbacks(checkpoint_interval=int(config['save_interval']))
-    accelerator, devices, strategy = get_gpu_settings(config['gpu_ids'], config['n_gpu'])
-
-    if config['use_wandb']:
-        wandb_logger = WandbLogger(project=config['project_name'], log_model=True)
-    else:
-        wandb_logger = None
-
+    accelerator, devices, strategy = "cpu", 1, None
     trainer_args = {
         'max_epochs': config['epochs'],
-        'callbacks': callbacks,
+        'callbacks': None,
         'default_root_dir': config['outdir'],
         'accelerator': accelerator,
         'devices': devices,
-        'logger': wandb_logger,
+        'logger': None,
         'deterministic': True,
     }
 
@@ -108,17 +72,17 @@ if __name__ == '__main__':
 
     seed_everything(config['seed'], workers=True)
 
-    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'])
-    data.setup_from_coco(config['annot_dir'] + '/modified_val_annotations.json', config['annot_dir'] + '/modified_val_annotations.json')
+    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], test=True)
+    data.prepare_testing_data(config['dataset'])
+    dataloader = data.test_dataloader()
 
-    
-    if config['checkpoint']:
-        model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
+    model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
+    if config['n_gpu']>0:
         checkpoint = torch.load(config['checkpoint'])
-        model.load_state_dict(checkpoint["state_dict"])
     else:
-        model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
-
+        checkpoint = torch.load(config['checkpoint'], map_location=torch.device('cpu'))
+    model.load_state_dict(checkpoint["state_dict"])
+    
 
     trainer = get_trainer(config)
 
@@ -127,5 +91,5 @@ if __name__ == '__main__':
     print('configuration:')
     pprint(config)
 
-    
+    # 
     trainer.fit(model, data)
