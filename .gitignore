@@ -7,3 +7,4 @@ lightning_logs/
 yolov8x-seg.pt
 results_pred/
 testing/
+__pycache__/

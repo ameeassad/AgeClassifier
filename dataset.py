@@ -33,8 +33,8 @@ class ArtportalenDataModule(pl.LightningDataModule):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.size = size
-        self.mean = mean
-        self.std = std
+        self.mean = (mean, mean, mean) if isinstance(mean, float) else tuple(mean)
+        self.std = (std, std, std) if isinstance(std, float) else tuple(std)
         self.test = test
 
         # transformations
@@ -43,14 +43,14 @@ class ArtportalenDataModule(pl.LightningDataModule):
             # Pad((self.size - 1, self.size - 1), padding_mode='constant'),
             RandomHorizontalFlip(),
             ToTensor(),
-            Normalize((mean, mean, mean), (std, std, std)),
+            Normalize(mean, std),
         ])
 
         self.val_transforms = Compose([
             # Resize(self.size),
             # Pad((self.size - 1, self.size - 1), padding_mode='constant'),
             ToTensor(),
-            Normalize((mean, mean, mean), (std, std, std)),
+            Normalize(mean, std),
         ])
 
     def prepare_data(self):
