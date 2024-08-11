@@ -33,9 +33,10 @@ class SimpleModel(LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.model = timm.create_model(
-            model_name=model_name, pretrained=pretrained, num_classes=num_classes
-        )
+        print(timm.__version__)
+
+        self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=num_classes)
+        
         self.train_loss = nn.CrossEntropyLoss()
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.val_loss = nn.CrossEntropyLoss()
