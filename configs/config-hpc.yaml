@@ -7,7 +7,7 @@ annot_dir: /proj/nobackup/aiforeagles/AgeClassifier/annot
 outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
 dataset: /proj/nobackup/aiforeagles/artportalen/data
 
-model_name: resnet152
+model_name: resnet152.a1_in1k
 checkpoint: 
 batch_size: 32
 img_size: 256
