@@ -33,7 +33,6 @@ class SimpleModel(LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-        print(timm.list_models(pretrained=True))
 
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=num_classes)
         
