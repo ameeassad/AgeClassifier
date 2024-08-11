@@ -117,8 +117,8 @@ class ArtportalenDataModule(pl.LightningDataModule):
             img_info = coco.loadImgs(ann['image_id'])[0]
 
             file_name = img_info['file_name']
-            # if '.' not in file_name:
-            #     file_name += '.jpg'
+            if '.' not in file_name:
+                file_name += '.jpg'
 
             data.append({
                 'image_id': ann['image_id'],
