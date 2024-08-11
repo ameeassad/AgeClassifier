@@ -19,7 +19,9 @@ from torchvision.transforms import (
     RandomResizedCrop,
     Resize,
     ToTensor,
-    Pad
+    Pad,
+    RandomRotation,
+    ColorJitter,
 )
 from torchvision.transforms.functional import resize, pad
 import pytorch_lightning as pl
@@ -42,6 +44,8 @@ class ArtportalenDataModule(pl.LightningDataModule):
             # Resize(self.size),
             # Pad((self.size - 1, self.size - 1), padding_mode='constant'),
             RandomHorizontalFlip(),
+            RandomRotation(degrees=15),
+            ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
             ToTensor(),
             Normalize(mean, std),
         ])
@@ -113,8 +117,8 @@ class ArtportalenDataModule(pl.LightningDataModule):
             img_info = coco.loadImgs(ann['image_id'])[0]
 
             file_name = img_info['file_name']
-            if '.' not in file_name:
-                file_name += '.jpg'
+            # if '.' not in file_name:
+            #     file_name += '.jpg'
 
             data.append({
                 'image_id': ann['image_id'],
