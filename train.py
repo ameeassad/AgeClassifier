@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     seed_everything(config['seed'], workers=True)
 
-    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['mean'], std=config['std'])
+    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'])
     data.setup_from_coco(config['annot_dir'] + '/modified_val_annotations.json', config['annot_dir'] + '/modified_val_annotations.json')
 
     

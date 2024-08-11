@@ -35,7 +35,7 @@ def main():
         config = yaml.safe_load(file)
     from model import SimpleModel
 
-    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['mean'], std=config['std'])
+    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'])
     data.prepare_testing_data(config['dataset'])
     dataloader = data.test_dataloader()
 
