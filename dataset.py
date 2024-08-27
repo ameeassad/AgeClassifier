@@ -1,6 +1,7 @@
 from pycocotools.coco import COCO
 import numpy as np
 import os
+import ast
 import math
 import pandas as pd
 import json
@@ -84,6 +85,42 @@ class ArtportalenDataModule(pl.LightningDataModule):
         self.train_dataset = EagleDataset(test_df, self.data_dir, self.train_transforms)
         self.val_dataset = EagleDataset(test_df, self.data_dir, self.val_transforms, test=self.test)
 
+    def setup_from_csv(self, train_csv, val_csv, stage=None):
+         # Load the CSV files
+        train_df = pd.read_csv(train_csv)
+        val_df = pd.read_csv(val_csv)
+
+        # Define the column name mappings
+        column_names = {
+            'annot_id': 'id',
+            'image_filename': 'file_name',
+            'Reporter': 'photographer',
+        }
+
+        def jpg_extension(filename):
+            filename = str(filename)
+            if not filename.lower().endswith('.jpg'):
+                return f"{filename}.jpg"
+            return filename
+
+        train_df = train_df.rename(columns=column_names)
+        train_df['file_name'] = train_df['file_name'].apply(jpg_extension)
+        val_df = val_df.rename(columns=column_names)
+        val_df['file_name'] = val_df['file_name'].apply(jpg_extension)
+
+        # Print the number of samples in train and validation sets
+        print(f"Train: {len(train_df)} Val: {len(val_df)}")
+
+        # Initialize the datasets
+        self.train_dataset = EagleDataset(train_df, self.data_dir, self.train_transforms)
+        self.val_dataset = EagleDataset(val_df, self.data_dir, self.val_transforms)
+
+        # Check the number of unique classes
+        unique_classes = train_df['category_id'].unique()
+        print(f"Unique classes in dataset: {unique_classes}")
+        self.num_classes = len(unique_classes)
+        print(f"Number of classes: {self.num_classes}")
+
     def setup_from_coco(self, train_annot, val_annot, stage=None):
         # Load COCO annotations
         with open(train_annot, 'r') as f:
@@ -121,6 +158,7 @@ class ArtportalenDataModule(pl.LightningDataModule):
                 file_name += '.jpg'
 
             data.append({
+                # 'id': ann['id'], # Annotation ID
                 'image_id': ann['image_id'],
                 'file_name': file_name,
                 'height': img_info['height'],
@@ -156,23 +194,23 @@ class EagleDataset(Dataset):
         return len(self.dataframe)
 
     def __getitem__(self, idx):
-        img_info = self.dataframe.iloc[idx]
-        img_path = os.path.join(self.data_dir, img_info['file_name'])
-        label = img_info['category_id'] - 1 
+        annot_info = self.dataframe.iloc[idx]
+        img_path = os.path.join(self.data_dir, str(annot_info['file_name']))
+        label = annot_info['category_id'] - 1 
         if self.test:
-            label = img_info['category_id']
+            label = annot_info['category_id']
 
         image = Image.open(img_path).convert("RGB")
 
         # Extract bounding box and crop the image
-        bbox = img_info['bbox']
+        bbox = ast.literal_eval(annot_info['bbox'])
         x_min = math.floor(bbox[0])
         y_min = math.floor(bbox[1])
         w = math.ceil(bbox[2])
         h = math.ceil(bbox[3])
         bbox = [x_min, y_min, w, h]
 
-        segmentation = img_info['segmentation']
+        segmentation = ast.literal_eval(annot_info['segmentation'])
         mask = self.create_mask(image.size, segmentation)
 
         # masked_image = np.array(cropped_image) * np.expand_dims(cropped_mask, axis=2)

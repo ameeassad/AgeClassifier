@@ -17,6 +17,7 @@ import ultralytics
 
 import itertools
 import json
+import argparse
 
 from itertools import groupby
 from skimage import io
@@ -25,6 +26,13 @@ from tqdm import tqdm
 import pycocotools.mask as mask_util
 
 from shapely.geometry import Polygon
+
+def get_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='Pre-prepprocessing the data.')
+    parser.add_argument('--image-dir', type=str, required=True, help='Path to image directory')
+    parser.add_argument('--yolo-model', type=str, required=True, help='Path to yolov8 model')
+    args = parser.parse_args()
+    return args
 
 class NumpyEncoder(json.JSONEncoder):
     """
@@ -115,8 +123,9 @@ class COCOBuilder():
         image = {}
         image["height"], image["width"] = self.get_size(row.imageID)
         image["id"] = row.fileid
-        image["file_name"] = str(row.imageID)
+        image["file_name"] = str(row.imageID) + ".jpg"
 
+        # image["sighting_id"] = str(row.SightingID)
         # image["activity"] = str(row.activity)
         # image["date_captured"] = str(row.date)
         # image["photographer"] = str(row.Reporter)
@@ -195,7 +204,7 @@ class COCOBuilder():
 
     def get_annotations(self, row):
         temp_annotations = []
-        image_file = str(row.imageID)
+        image_file = str(row.imageID) + ".jpg"
 
         image = Image.open(os.path.join(self.IMAGE_DIR, image_file))
         W, H = image.size
@@ -260,7 +269,10 @@ class COCOBuilder():
 
 
 if __name__ == '__main__':
-    IMAGE_DIR = '/content/drive/MyDrive/artportalen_goeag'
-    model = YOLO('content/yolov8x-seg.pt')
+    args = get_args()
+    IMAGE_DIR = args.image_dir
+    model = YOLO(args.yolo_model)
     coco = COCOBuilder(IMAGE_DIR, model)
-    coco.setup_testing()
+    # coco.setup_testing()
+
+    coco.setup("example", "train.csv", "val.csv", "test.csv")

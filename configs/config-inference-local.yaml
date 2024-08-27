@@ -4,6 +4,11 @@ use_wandb: False
 wandb_entity: winniethepooh
 
 annot_dir:
+annot_train_file: 
+annot_val_file: 
+annot_test_file: 
+coco_setup: False
+
 outdir: results_pred/
 dataset: testing/images
 
