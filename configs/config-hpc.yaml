@@ -11,9 +11,10 @@ annot_test_file:
 
 
 outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
-dataset: /proj/nobackup/aiforeagles/artportalen/data
+dataset: /proj/nobackup/aiforeagles/artportalen/artportalen_goeag
 
 model_name: resnet152d
+model_architecture: SimpleModel
 checkpoint: 
 batch_size: 32
 img_size: 256
