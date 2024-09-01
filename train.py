@@ -99,6 +99,7 @@ def get_trainer(config) -> Trainer:
 
 
 if __name__ == '__main__':
+    print('Start training')
     args = get_args()
 
     shutil.copyfile(args.config, "config.yaml")
