@@ -216,6 +216,8 @@ class ResNetPlus2FCModel(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         if config['use_gradcam']:
+            for param in self.model.parameters():
+                param.requires_grad = True
             with torch.enable_grad():
                 x, target = batch
                 out = self(x)
@@ -256,6 +258,9 @@ class ResNetPlus2FCModel(LightningModule):
                 #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
                 
                 # self.model.train()
+            # Re-freeze the model parameters after computing the Grad-CAM
+            for param in self.model.parameters():
+                param.requires_grad = False
         else:
             x, target = batch
             out = self(x)
