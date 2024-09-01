@@ -110,16 +110,20 @@ if __name__ == '__main__':
 
     data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'])
     if config['coco_setup']:
+        print('Setting up from COCO')
         data.setup_from_coco(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
     else:
+        print('Setting up from CSV')
         data.setup_from_csv(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
 
     
     if config['checkpoint']:
+        print('Loading model from checkpoint')
         model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
         checkpoint = torch.load(config['checkpoint'])
         model.load_state_dict(checkpoint["state_dict"])
     else:
+        print('Start training from pretrained model')
         model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
 
 
