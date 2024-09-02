@@ -78,6 +78,13 @@ def get_trainer(config) -> Trainer:
 
     if config['use_wandb']:
         wandb_logger = WandbLogger(project=config['project_name'], log_model=True)
+        # add multiple hyperparameters
+        wandb_logger.experiment.config.update({"model_architecture": config['model_architecture'], 
+                                                "checkpoint": config['checkpoint'],
+                                                "batch_size": config['batch_size'],
+                                                "img_size": config['img_size'], 
+                                                "seed": config['seed'],
+                                                "transforms": str(config['transforms']['mean']) + " / " + str(config['transforms']['std']),})
     else:
         wandb_logger = None
 
