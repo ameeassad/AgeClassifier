@@ -18,6 +18,7 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from dataset import ArtportalenDataModule, unnormalize
+from utils import TripletLoss
 
 # Load configuration from YAML file
 with open('config.yaml', 'r') as file:
@@ -30,6 +31,7 @@ class SimpleModel(LightningModule):
         pretrained: bool = False,
         num_classes: int | None = None,
         outdir: str = 'results',
+        use_triplet_loss: bool = False, 
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -42,6 +44,10 @@ class SimpleModel(LightningModule):
         self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.gradient = None
         self.outdir = outdir
+
+        self.use_triplet_loss = use_triplet_loss
+        if self.use_triplet_loss:
+            self.triplet_loss = TripletLoss(margin= float(0.3))
     
     def activations_hook(self, grad):
         self.gradient = grad
@@ -62,13 +68,15 @@ class SimpleModel(LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, target = batch
-
+        
         out = self(x)
         _, pred = out.max(1)
 
         loss = self.train_loss(out, target)
         acc = self.train_acc(pred, target)
         self.log_dict({'train/loss': loss, 'train/acc': acc}, prog_bar=True)
+
+        
 
         return loss
 
@@ -158,9 +166,11 @@ class ResNetPlus2FCModel(LightningModule):
 
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=0)  # No classification head yet
 
-        # Freeze the ResNet backbone
-        for param in self.model.parameters():
+        # Freeze the ResNet backbone (except last 3 layers)
+        self.resnet_layers = list(self.model.named_parameters())
+        for name, param in self.resnet_layers[:-3]:
             param.requires_grad = False
+
 
         # Add new fully connected layers
         self.fc1 = nn.Linear(2048, 1024)  # ResNet-50 output features = 2048
@@ -259,7 +269,7 @@ class ResNetPlus2FCModel(LightningModule):
                 
                 # self.model.train()
             # Re-freeze the model parameters after computing the Grad-CAM
-            for param in self.model.parameters():
+            for name, param in self.resnet_layers[:-3]:
                 param.requires_grad = False
         else:
             x, target = batch

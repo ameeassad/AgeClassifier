@@ -13,7 +13,7 @@ annot_test_file:
 outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
 dataset: /proj/nobackup/aiforeagles/artportalen/artportalen_goeag
 
-model_name: resnet152d
+model_name: resnet50
 model_architecture: ResNetPlus2FCModel
 checkpoint: 
 batch_size: 32
