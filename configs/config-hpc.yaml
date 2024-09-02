@@ -14,18 +14,18 @@ outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
 dataset: /proj/nobackup/aiforeagles/artportalen/artportalen_goeag
 
 model_name: resnet152d
-model_architecture: SimpleModel
+model_architecture: ResNetPlus2FCModel
 checkpoint: 
 batch_size: 32
 img_size: 256
-epochs: 100
+epochs: 150
 save_interval: 10
 n_gpu: 1
 num_workers: 12
 gpu_ids: 
 seed: 42
 
-use_gradcam: False
+use_gradcam: True
 
 transforms:
   mean: [0.485, 0.456, 0.406]
@@ -34,7 +34,7 @@ transforms:
 early_stopping:
   monitor: val/loss
   min_delta: 0.0005
-  patience: 10
+  patience: 50
   verbose: true
   mode: min
 
