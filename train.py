@@ -84,7 +84,16 @@ def get_trainer(config) -> Trainer:
                                                 "batch_size": config['batch_size'],
                                                 "img_size": config['img_size'], 
                                                 "seed": config['seed'],
-                                                "transforms": str(config['transforms']['mean']) + " / " + str(config['transforms']['std']),})
+                                                "transforms": str(config['transforms']['mean']) + " / " + str(config['transforms']['std']),
+                                                "optimizer": config['solver']['OPT'],
+                                                "weight_decay": config['solver']['WEIGHT_DECAY'],
+                                                "momentum": config['solver']['MOMENTUM'],
+                                                "base_lr": config['solver']['BASE_LR'],
+                                                "lr_scheduler": config['solver']['LR_SCHEDULER'],
+                                                "lr_decay_rate": config['solver']['LR_DECAY_RATE'],
+                                                "lr_step_size": config['solver']['LR_STEP_SIZE'],
+                                                "lr_step_milestones": config['solver']['LR_STEP_MILESTONES']
+                                                })
     else:
         wandb_logger = None
 
