@@ -16,7 +16,7 @@ dataset: /proj/nobackup/aiforeagles/artportalen/artportalen_goeag
 model_name: resnet50
 model_architecture: ResNetPlus2FCModel
 checkpoint: 
-batch_size: 32
+batch_size: 128
 img_size: 256
 epochs: 150
 save_interval: 10
