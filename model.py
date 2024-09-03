@@ -294,8 +294,9 @@ class ResNetPlus2FCModel(LightningModule):
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=0)  # No classification head yet
 
         # Freeze the ResNet backbone (except last 3 layers)
+        self.frozen_layers = 10
         self.resnet_layers = list(self.model.named_parameters())
-        for name, param in self.resnet_layers[:-3]:
+        for name, param in self.resnet_layers[:-1*self.frozen_layers]:
             param.requires_grad = False
 
 
@@ -396,7 +397,7 @@ class ResNetPlus2FCModel(LightningModule):
                 
                 # self.model.train()
             # Re-freeze the model parameters after computing the Grad-CAM
-            for name, param in self.resnet_layers[:-3]:
+            for name, param in self.resnet_layers[:-1*self.frozen_layers]:
                 param.requires_grad = False
         else:
             x, target = batch
