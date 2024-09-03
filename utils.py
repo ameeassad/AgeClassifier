@@ -5,6 +5,7 @@
 """
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 
 def normalize(x, axis=-1):
@@ -33,7 +34,6 @@ def euclidean_dist(x, y):
     dist.addmm_(1, -2, x, y.t())
     dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
     return dist
-
 
 def hard_example_mining(dist_mat, labels, return_inds=False):
     """For each anchor, find the hardest positive and negative sample.
@@ -88,6 +88,94 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
         return dist_ap, dist_an, p_inds, n_inds
 
     return dist_ap, dist_an
+
+def batch_hard_mining_embeddings(embeddings, labels):
+    """
+    Perform batch hard mining to find the hardest positive and hardest negative for each anchor in the batch.
+    
+    Args:
+        embeddings (torch.Tensor): Embedding matrix of shape (N, D) where N is the batch size and D is the embedding dimension.
+        labels (torch.Tensor): Labels corresponding to the embeddings of shape (N,).
+    
+    Returns:
+        torch.Tensor: Triplet loss for the batch.
+    """
+    # Calculate pairwise distance matrix
+    distance_matrix = euclidean_dist(embeddings, embeddings)
+    
+    # Initialize lists to hold triplet losses
+    triplet_losses = []
+    
+    for i in range(len(labels)):
+        # Get the anchor label
+        anchor_label = labels[i]
+
+        # Get the distances for the current anchor
+        distances = distance_matrix[i]
+
+        # Positive mask: True for examples of the same class
+        positive_mask = (labels == anchor_label).float()
+
+        # Negative mask: True for examples of different classes
+        negative_mask = (labels != anchor_label).float()
+
+        # Mask out the anchor itself in the positive mask
+        positive_mask[i] = 0
+
+        # Find the hardest positive: maximum distance to any positive example
+        hardest_positive = torch.max(distances * positive_mask)
+
+        # Find the hardest negative: minimum distance to any negative example
+        hardest_negative = torch.min(distances * negative_mask + (1 - negative_mask) * 1e12)  # 1e12 is a large value to ignore zeros
+
+        # Calculate Triplet Loss
+        triplet_loss = F.relu(hardest_positive - hardest_negative + margin)
+        triplet_losses.append(triplet_loss)
+
+    # Average the triplet losses
+    triplet_loss = torch.mean(torch.stack(triplet_losses))
+    
+    return triplet_loss
+
+def batch_hard_mining_by_label(labels, num_classes):
+    """
+    Perform batch hard mining based on labels to find the hardest positive
+    and hardest negative for each anchor in the batch.
+    
+    Args:
+        labels (torch.Tensor): Labels corresponding to the embeddings of shape (N,).
+        num_classes (int): Total number of classes.
+    
+    Returns:
+        list of tuples: Each tuple contains (anchor_index, hardest_positive_index, hardest_negative_index)
+    """
+    batch_size = labels.size(0)
+    triplets = []
+
+    for i in range(batch_size):
+        anchor_label = labels[i].item()
+
+        # Get indices of all samples with the same label (positive samples)
+        positive_indices = (labels == anchor_label).nonzero(as_tuple=False).view(-1)
+        positive_indices = positive_indices[positive_indices != i]  # Exclude the anchor itself
+        
+        # Hardest positive: any sample with the same label (could choose randomly or the first one)
+        hardest_positive_index = positive_indices[0] if positive_indices.numel() > 0 else i
+
+        # Find the label farthest from the anchor label
+        label_diffs = torch.abs(labels - anchor_label)
+        max_diff = label_diffs.max().item()
+
+        # Get indices of samples with the maximum label difference
+        negative_indices = (label_diffs == max_diff).nonzero(as_tuple=False).view(-1)
+        
+        # Hardest negative: any sample with the farthest label (could choose randomly or the first one)
+        hardest_negative_index = negative_indices[0] if negative_indices.numel() > 0 else i
+
+        triplets.append((i, hardest_positive_index.item(), hardest_negative_index.item()))
+
+    return triplets
+
 
 
 class TripletLoss(object):
