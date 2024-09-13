@@ -3,6 +3,7 @@ import numpy as np
 import os
 import ast
 import math
+import pickle
 import pandas as pd
 import json
 from IPython.display import display
@@ -51,7 +52,7 @@ class ArtportalenDataModule(pl.LightningDataModule):
         train_transforms (callable): Transformations applied to the training dataset.
         val_transforms (callable): Transformations applied to the validation dataset.
     """
-    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5, test=False, skeleton=False):
+    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5, test=False, cache_dir=None, skeleton=False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -59,6 +60,7 @@ class ArtportalenDataModule(pl.LightningDataModule):
         self.mean = (mean, mean, mean) if isinstance(mean, float) else tuple(mean)
         self.std = (std, std, std) if isinstance(std, float) else tuple(std)
         self.test = test
+        self.cache_dir = cache_dir
         self.skeleton = skeleton
 
         # transformations
@@ -261,14 +263,19 @@ class EagleDataset(Dataset):
         self.test = test
         self.skeleton = skeleton
 
-        # Cache for storing precomputed masks
+        # Load cache from disk if available
+        # self.mask_cache = self.load_cache('mask_cache.pkl') if cache_dir else {}
         self.mask_cache = {}
+        self.mask_dir = f'data_cache/masks_{size}'
+        os.makedirs(self.mask_dir, exist_ok=True)
 
         if skeleton:
             # self.skeleton_transform = skeleton
             self.skeleton_category = AKSkeletonCategory()
             self.skeleton_cache = {}
-
+            # self.skeleton_cache = self.load_cache('skeleton_cache.pkl') if cache_dir and skeleton else {}
+            self.skeleton_dir = f'data_cache/skeletons_{size}'
+            os.makedirs(self.skeleton_dir, exist_ok=True)
 
     def __len__(self):
         return len(self.dataframe)
@@ -285,15 +292,22 @@ class EagleDataset(Dataset):
         """
         annot_info = self.dataframe.iloc[idx]
         img_path = os.path.join(self.data_dir, str(annot_info['file_name']))
+        annot_id = annot_info['id']
         label = annot_info['category_id'] - 1 
         if self.test:
             label = annot_info['category_id']
 
         # Check cache for precomputed mask and skeleton
-        if idx in self.mask_cache:
-            masked_image = self.mask_cache[idx]
+        mask_filename = os.path.join(self.mask_dir, f"{annot_id}.png")
+        skeleton_filename = os.path.join(self.skeleton_dir, f"{annot_id}.npy")
+        if os.path.exists(mask_filename):
+            masked_image = Image.open(mask_filename)
+        # if idx in self.mask_cache:
+        #     masked_image = self.mask_cache[idx]
             if self.skeleton:
-                skeleton_channel = self.skeleton_cache[idx]
+                # skeleton_channel = self.skeleton_cache[idx]
+                if os.path.exists(skeleton_filename):
+                    skeleton_channel = np.load(skeleton_filename)
         else:
             image = Image.open(img_path).convert("RGB")
 
@@ -327,10 +341,17 @@ class EagleDataset(Dataset):
             masked_image = masked_image.crop((x_min, y_min, x_min + w, y_min + h))
 
             self.mask_cache[idx] = masked_image
+            # Save mask
+            masked_image.save(mask_filename)  # Save the cropped image as it is
+
+
 
             if self.skeleton:
                 skeleton_channel = skeleton_channel[y_min:y_min + h, x_min:x_min + w]
+
                 self.skeleton_cache[idx] = skeleton_channel
+                # Save skeleton channel as a numpy file
+                np.save(skeleton_filename, skeleton_channel)
 
         # resize, pad, transform (cached or newly computed images)
         if self.skeleton:
@@ -409,6 +430,7 @@ class EagleDataset(Dataset):
 
 
         return padded_image, padded_skeleton_channel
+
 
 
 def unnormalize(x, mean, std):
