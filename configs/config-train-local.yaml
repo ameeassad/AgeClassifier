@@ -1,6 +1,6 @@
 project_name: age-classifier-local
 notes: 
-use_wandb: True
+use_wandb: False
 wandb_entity: winniethepooh
 
 annot_dir: ./annot/

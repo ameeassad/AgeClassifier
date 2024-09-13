@@ -56,7 +56,10 @@ def get_gpu_settings(
         tuple[str, int, str]: accelerator, devices, strategy
     """
     if not torch.cuda.is_available():
-        return "cpu", None, None
+        if torch.backends.mps.is_available():
+            return "mps", 1, None
+        else:
+            return "cpu", 1, None
 
     if gpu_ids is not None:
         devices = gpu_ids
