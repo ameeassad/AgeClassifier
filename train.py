@@ -72,6 +72,8 @@ def get_gpu_settings(
         devices = 1
         strategy = None
 
+    torch.set_float32_matmul_precision('high')
+
     return "gpu", devices, strategy
 
 
