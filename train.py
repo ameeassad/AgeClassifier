@@ -127,10 +127,10 @@ if __name__ == '__main__':
     # setup dataset
     data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'], skeleton = config['pose_processing'])
     
-    if config['annot_train_file'][:3]=="csv":
+    if config['annot_train_file'].endswith('.csv'):
         print('Setting up from CSV')
         data.setup_from_csv(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
-    elif config['annot_train_file'][:4]=="json":
+    elif config['annot_train_file'].endswith('.json'):
         print('Setting up from COCO')
         data.setup_from_coco(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
     else:
