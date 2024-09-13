@@ -299,7 +299,8 @@ class EagleDataset(Dataset):
 
         # Check cache for precomputed mask and skeleton
         mask_filename = os.path.join(self.mask_dir, f"{annot_id}.png")
-        skeleton_filename = os.path.join(self.skeleton_dir, f"{annot_id}.npy")
+        if self.skeleton:
+            skeleton_filename = os.path.join(self.skeleton_dir, f"{annot_id}.npy")
         if os.path.exists(mask_filename):
             masked_image = Image.open(mask_filename)
         # if idx in self.mask_cache:
