@@ -91,60 +91,83 @@ class SimpleModel(LightningModule):
 
         loss = self.train_loss(out, target)
         acc = self.train_acc(pred, target)
-        self.log_dict({'train/loss': loss, 'train/acc': acc}, prog_bar=True)
+
+        self.log('epoch', self.current_epoch, prog_bar=True, logger=True)
+        # self.log_dict({'train/loss': loss, 'train/acc': acc}, prog_bar=True)
+        self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train/acc', acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
         return loss
 
+    # def validation_step(self, batch, batch_idx):
+    #     if config['use_gradcam']:
+    #         with torch.enable_grad():
+    #             x, target = batch
+    #             out = self(x)
+    #             _, pred = out.max(1)
+
+    #             loss = self.val_loss(out, target)
+    #             acc = self.val_acc(pred, target)
+
+    #             self.log('epoch', self.current_epoch, prog_bar=True, logger=True)
+    #             self.log_dict({'val/loss': loss, 'val/acc': acc})
+
+    #             unnormalized_x = unnormalize(x[0].cpu(), config['transforms']['mean'], config['transforms']['std']).permute(1, 2, 0).numpy()
+    #             unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+
+
+    #             cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
+    #             targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
+    #             grayscale_cam = cam(input_tensor=x, targets=targets)
+    #             grayscale_cam = grayscale_cam[0, :]
+    #             visualization = show_cam_on_image(unnormalized_x, grayscale_cam, use_rgb=True)
+    #             img = Image.fromarray((visualization * 255).astype(np.uint8))
+
+    #             # Log image to 
+    #             if config['use_wandb']:
+    #                 wandb_img = wandb.Image(visualization, caption=f"GradCAM Batch {batch_idx} Image 0")
+    #                 self.logger.experiment.log({"GradCAM Images": wandb_img})
+
+                
+    #             # save locally
+    #             os.makedirs(self.outdir, exist_ok=True)
+    #             img.save(os.path.join(self.outdir, f'cam_image_val_batch{batch_idx}_img0.png'))
+                
+    #             # To save all images in batch:
+    #             # for i in range(len(x)):
+    #             #     grayscale_cam_img = 
+    #             # grayscale_cam[i]
+    #             #     visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
+    #             #     img = Image.fromarray((visualization * 255).astype(np.uint8))
+    #             #     os.makedirs(self.hparams.outdir, exist_ok=True)
+    #             #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
+                
+    #             # self.model.train()
+    #     else:
+    #         x, target = batch
+    #         out = self(x)
+    #         _, pred = out.max(1)
+
+    #         loss = self.val_loss(out, target)
+    #         acc = self.val_acc(pred, target)
+    #         self.log_dict({'val/loss': loss, 'val/acc': acc})
+
     def validation_step(self, batch, batch_idx):
-        if config['use_gradcam']:
-            with torch.enable_grad():
-                x, target = batch
-                out = self(x)
-                _, pred = out.max(1)
+        x, target = batch
+        out = self(x)
+        _, pred = out.max(1)
 
-                loss = self.val_loss(out, target)
-                acc = self.val_acc(pred, target)
-                self.log_dict({'val/loss': loss, 'val/acc': acc})
+        loss = self.val_loss(out, target)
+        acc = self.val_acc(pred, target)
+        # self.log_dict({'val/loss': loss, 'val/acc': acc})
 
-                unnormalized_x = unnormalize(x[0].cpu(), config['transforms']['mean'], config['transforms']['std']).permute(1, 2, 0).numpy()
-                unnormalized_x = np.clip(unnormalized_x, 0, 1)  # Ensure the values are within [0, 1]
+        # Log validation loss and accuracy
+        self.log('val/loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val/acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
+        return loss
 
-                cam = GradCAM(model=self.model, target_layers=[self.model.layer4[-1]])
-                targets = [ClassifierOutputTarget(class_idx) for class_idx in target]
-                grayscale_cam = cam(input_tensor=x, targets=targets)
-                grayscale_cam = grayscale_cam[0, :]
-                visualization = show_cam_on_image(unnormalized_x, grayscale_cam, use_rgb=True)
-                img = Image.fromarray((visualization * 255).astype(np.uint8))
-
-                # Log image to 
-                if config['use_wandb']:
-                    wandb_img = wandb.Image(visualization, caption=f"GradCAM Batch {batch_idx} Image 0")
-                    self.logger.experiment.log({"GradCAM Images": wandb_img})
-
-                
-                # save locally
-                os.makedirs(self.outdir, exist_ok=True)
-                img.save(os.path.join(self.outdir, f'cam_image_val_batch{batch_idx}_img0.png'))
-                
-                # To save all images in batch:
-                # for i in range(len(x)):
-                #     grayscale_cam_img = 
-                # grayscale_cam[i]
-                #     visualization = show_cam_on_image(x[i].cpu().numpy().transpose(1, 2, 0), grayscale_cam_img, use_rgb=True)
-                #     img = Image.fromarray((visualization * 255).astype(np.uint8))
-                #     os.makedirs(self.hparams.outdir, exist_ok=True)
-                #     img.save(os.path.join(self.hparams.outdir, f'cam_image_val_batch{batch_idx}_img{i}.png'))
-                
-                # self.model.train()
-        else:
-            x, target = batch
-            out = self(x)
-            _, pred = out.max(1)
-
-            loss = self.val_loss(out, target)
-            acc = self.val_acc(pred, target)
-            self.log_dict({'val/loss': loss, 'val/acc': acc})
+        return loss
 
     def test_step(self, batch, batch_idx):
             x, target = batch

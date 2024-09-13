@@ -11,6 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 
 from dataset import ArtportalenDataModule
+from GradCam import GradCAMCallback
 
 
 def get_args() -> argparse.Namespace:
@@ -39,7 +40,18 @@ def get_basic_callbacks(checkpoint_interval: int = 1) -> list:
         verbose=config['early_stopping']['verbose'],
         mode=config['early_stopping']['mode']           # Mode for the monitored metric ('min' or 'max')
     )
-    return [ckpt_callback, lr_callback, early_stop_callback]
+    callbacks = [ckpt_callback, lr_callback, early_stop_callback]
+
+    if config['use_gradcam']:
+        gradcam_callback = GradCAMCallback(
+            model=model, 
+            config=config, 
+            outdir=config['outdir'], 
+            log_every_n_epochs=1 
+        )
+        callbacks.append(gradcam_callback)
+
+    return callbacks
 
 
 def get_gpu_settings(
@@ -99,6 +111,8 @@ def get_trainer(config) -> Trainer:
                                                 "lr_step_size": config['solver']['LR_STEP_SIZE'],
                                                 "lr_step_milestones": config['solver']['LR_STEP_MILESTONES']
                                                 })
+        # wandb_logger.watch(model, log='all', log_freq=10)
+
     else:
         wandb_logger = None
 
@@ -109,6 +123,7 @@ def get_trainer(config) -> Trainer:
         'accelerator': accelerator,
         'devices': devices,
         'logger': wandb_logger,
+        'log_every_n_steps': 100,
         'deterministic': True,
     }
 

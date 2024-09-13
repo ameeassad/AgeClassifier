@@ -232,13 +232,13 @@ class ArtportalenDataModule(pl.LightningDataModule):
         return pd.DataFrame(data)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=2, persistent_workers=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=2)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=2, persistent_workers=True)
     
     def test_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0, persistent_workers=True)
 
 
 class EagleDataset(Dataset):
@@ -261,9 +261,13 @@ class EagleDataset(Dataset):
         self.test = test
         self.skeleton = skeleton
 
+        # Cache for storing precomputed masks
+        self.mask_cache = {}
+
         if skeleton:
             # self.skeleton_transform = skeleton
             self.skeleton_category = AKSkeletonCategory()
+            self.skeleton_cache = {}
 
 
     def __len__(self):
@@ -285,45 +289,58 @@ class EagleDataset(Dataset):
         if self.test:
             label = annot_info['category_id']
 
-        image = Image.open(img_path).convert("RGB")
+        # Check cache for precomputed mask and skeleton
+        if idx in self.mask_cache:
+            masked_image = self.mask_cache[idx]
+            if self.skeleton:
+                skeleton_channel = self.skeleton_cache[idx]
+        else:
+            image = Image.open(img_path).convert("RGB")
 
+            if self.skeleton:
+                keypoints = annot_info['keypoints']
+                # Convert keypoints from string to list if necessary
+                if isinstance(keypoints, str):
+                    keypoints = ast.literal_eval(keypoints)
+                connections = self.skeleton_category.get_connections()
+                # Convert connections from string to list if necessary
+                if isinstance(connections, str):
+                    connections = ast.literal_eval(connections)
+                skeleton_channel = create_skeleton_channel(keypoints, connections, height=image.size[0], width=image.size[1])
+
+            # Extract bounding box and crop the image
+            bbox = ast.literal_eval(annot_info['bbox'])
+            x_min = math.floor(bbox[0])
+            y_min = math.floor(bbox[1])
+            w = math.ceil(bbox[2])
+            h = math.ceil(bbox[3])
+            bbox = [x_min, y_min, w, h]
+
+            segmentation = ast.literal_eval(annot_info['segmentation'])
+            mask = self.create_mask(image.size, segmentation)
+
+            # masked_image = np.array(cropped_image) * np.expand_dims(cropped_mask, axis=2)
+            masked_image = np.array(image) * np.expand_dims(mask, axis=2)
+            masked_image = Image.fromarray(masked_image.astype('uint8'))
+
+            # Crop the image and the mask to the bounding box
+            masked_image = masked_image.crop((x_min, y_min, x_min + w, y_min + h))
+
+            self.mask_cache[idx] = masked_image
+
+            if self.skeleton:
+                skeleton_channel = skeleton_channel[y_min:y_min + h, x_min:x_min + w]
+                self.skeleton_cache[idx] = skeleton_channel
+
+        # resize, pad, transform (cached or newly computed images)
         if self.skeleton:
-            keypoints = annot_info['keypoints']
-            # Convert keypoints from string to list if necessary
-            if isinstance(keypoints, str):
-                keypoints = ast.literal_eval(keypoints)
-            connections = self.skeleton_category.get_connections()
-            # Convert connections from string to list if necessary
-            if isinstance(connections, str):
-                connections = ast.literal_eval(connections)
-            skeleton_channel = create_skeleton_channel(keypoints, connections, height=image.size[0], width=image.size[1])
-
-        # Extract bounding box and crop the image
-        bbox = ast.literal_eval(annot_info['bbox'])
-        x_min = math.floor(bbox[0])
-        y_min = math.floor(bbox[1])
-        w = math.ceil(bbox[2])
-        h = math.ceil(bbox[3])
-        bbox = [x_min, y_min, w, h]
-
-        segmentation = ast.literal_eval(annot_info['segmentation'])
-        mask = self.create_mask(image.size, segmentation)
-
-        # masked_image = np.array(cropped_image) * np.expand_dims(cropped_mask, axis=2)
-        masked_image = np.array(image) * np.expand_dims(mask, axis=2)
-        masked_image = Image.fromarray(masked_image.astype('uint8'))
-
-        # Crop the image and the mask to the bounding box
-        masked_image = masked_image.crop((x_min, y_min, x_min + w, y_min + h))
-
-        if self.skeleton:
-            skeleton_channel = skeleton_channel[y_min:y_min + h, x_min:x_min + w]
+            # skeleton_channel = skeleton_channel[y_min:y_min + h, x_min:x_min + w]
             # print(skeleton_channel.shape)
             # print(skeleton_channel)
             masked_image, skeleton_channel = self.resize_and_pad(masked_image, self.size, skeleton_channel=skeleton_channel)
             masked_image = self.transform(masked_image, skeleton_channel)
         elif self.transform:
-            masked_image = self.resize_and_pad(masked_image, self.size)
+            masked_image, _ = self.resize_and_pad(masked_image, self.size)
             masked_image = self.transform(masked_image)
         
         return masked_image, label
@@ -387,10 +404,11 @@ class EagleDataset(Dataset):
                                 (pad_width // 2, pad_width - (pad_width // 2)))
             padded_skeleton_channel = np.pad(skeleton_channel_resized, padding_skeleton, mode='constant', constant_values=0)
 
-            return padded_image, padded_skeleton_channel
+        else:
+            padded_skeleton_channel = np.zeros((size, size), dtype=np.float32)
 
 
-        return padded_image
+        return padded_image, padded_skeleton_channel
 
 
 def unnormalize(x, mean, std):
@@ -405,6 +423,8 @@ def unnormalize(x, mean, std):
     Returns:
         torch.Tensor: Unnormalized tensor.
     """
+    x = x.clone().detach()[:3]
+
     mean = (mean, mean, mean) if isinstance(mean, float) else tuple(mean)
     std = (std, std, std) if isinstance(std, float) else tuple(std)
 

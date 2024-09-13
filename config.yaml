@@ -1,6 +1,6 @@
 project_name: age-classifier-local
 notes: 
-use_wandb: False
+use_wandb: True
 wandb_entity: winniethepooh
 
 annot_dir: ./annot/
@@ -10,10 +10,10 @@ annot_test_file:
 
 
 outdir: ./results
-dataset: /Users/amee/Library/CloudStorage/GoogleDrive-ameeassad@gmail.com/My Drive/artportalen_goeag
+dataset: /Users/amee/Desktop/artportalen_goeag
 
-pose_processing: False
-model_name: resnet152d
+pose_processing: True
+model_name: resnet50
 model_architecture: SimpleModel
 checkpoint: 
 batch_size: 4
@@ -25,7 +25,7 @@ num_workers: 1
 gpu_ids: 
 seed: 42
 
-use_gradcam: False
+use_gradcam: True
 
 transforms:
   mean: [0.485, 0.456, 0.406]
