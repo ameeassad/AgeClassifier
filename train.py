@@ -111,7 +111,7 @@ def get_trainer(config) -> Trainer:
                                                 "lr_step_size": config['solver']['LR_STEP_SIZE'],
                                                 "lr_step_milestones": config['solver']['LR_STEP_MILESTONES']
                                                 })
-        # wandb_logger.watch(model, log='all', log_freq=10)
+        wandb_logger.watch(model, log='all', log_freq=10)
 
     else:
         wandb_logger = None
