@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
     # setup model
     if config['checkpoint']:
-        print(f'Loading model {config['model_architecture']} from checkpoint')
+        print(f"Loading model {config['model_architecture']} from checkpoint")
         if config['model_architecture']=='ResNetPlusModel':
             model = ResNetPlusModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
         else:
@@ -149,7 +149,7 @@ if __name__ == '__main__':
         checkpoint = torch.load(config['checkpoint'])
         model.load_state_dict(checkpoint["state_dict"])
     else:
-        print(f'Start training {config['model_architecture']} from pretrained model')
+        print(f"Start training {config['model_architecture']} from pretrained model")
         if config['model_architecture']=='ResNetPlusModel':
             model = ResNetPlusModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
         else:
