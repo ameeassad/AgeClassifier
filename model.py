@@ -91,8 +91,6 @@ class SimpleModel(LightningModule):
 
         loss = self.train_loss(out, target)
         acc = self.train_acc(pred, target)
-
-        self.log('epoch', self.current_epoch, prog_bar=True, logger=True)
         # self.log_dict({'train/loss': loss, 'train/acc': acc}, prog_bar=True)
         self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train/acc', acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
