@@ -120,7 +120,7 @@ if __name__ == '__main__':
     shutil.copyfile(args.config, "config.yaml")
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
-    from model import SimpleModel, ResNetPlus2FCModel
+    from model import SimpleModel, ResNetPlusModel
 
     seed_everything(config['seed'], workers=True)
 
@@ -135,16 +135,16 @@ if __name__ == '__main__':
     
     if config['checkpoint']:
         print('Loading model from checkpoint')
-        if config['model_architecture']=='ResNetPlus2FCModel':
-            model = ResNetPlus2FCModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
+        if config['model_architecture']=='ResNetPlusModel':
+            model = ResNetPlusModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
         else:
             model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
         checkpoint = torch.load(config['checkpoint'])
         model.load_state_dict(checkpoint["state_dict"])
     else:
         print('Start training from pretrained model')
-        if config['model_architecture']=='ResNetPlus2FCModel':
-            model = ResNetPlus2FCModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
+        if config['model_architecture']=='ResNetPlusModel':
+            model = ResNetPlusModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
         else:
             model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
 

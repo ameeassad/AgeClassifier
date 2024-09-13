@@ -123,7 +123,8 @@ class COCOBuilder():
         image = {}
         image["height"], image["width"] = self.get_size(row.imageID)
         image["id"] = row.fileid
-        image["file_name"] = str(row.imageID) + ".jpg"
+        # image["file_name"] = str(row.imageID) + ".jpg"
+        image["file_name"] = str(row.imageID)
 
         # image["sighting_id"] = str(row.SightingID)
         # image["activity"] = str(row.activity)
@@ -204,7 +205,8 @@ class COCOBuilder():
 
     def get_annotations(self, row):
         temp_annotations = []
-        image_file = str(row.imageID) + ".jpg"
+        # image_file = str(row.imageID) + ".jpg"
+        image_file = str(row.imageID) 
 
         image = Image.open(os.path.join(self.IMAGE_DIR, image_file))
         W, H = image.size

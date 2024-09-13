@@ -1,38 +1,40 @@
-project_name: age-classifier-local
+project_name: age-classifier
 notes: 
-use_wandb: True
+use_wandb: False
 wandb_entity: winniethepooh
 
-coco_setup: False
-annot_dir: ./annot/
-annot_train_file: train_sep_sightings.csv
-annot_val_file: val_sep_sightings.csv
+annot_dir:
+annot_train_file: 
+annot_val_file: 
 annot_test_file: 
+coco_setup: False
 
+outdir: results_pred/
+dataset: testing/images
 
-outdir: ./results
-dataset: /Users/amee/Library/CloudStorage/GoogleDrive-ameeassad@gmail.com/My Drive/artportalen_goeag
-
-model_name: resnet152d
-checkpoint: 
-batch_size: 4
+model_name: resnet152
+checkpoint: checkpoints/model-onwggb74/last-v3.ckpt
+num_classes: 5
+batch_size: 1
 img_size: 256
-epochs: 100
-save_interval: 10
-n_gpu: 1
+epochs: 0
+save_interval: 1
+n_gpu: 0
 num_workers: 1
 gpu_ids: 
 seed: 42
 
-use_gradcam: False
+
+local_checkpoint_interval: 10
+max_epochs: 100
 
 transforms:
-  mean: [0.485, 0.456, 0.406]
-  std: [0.229, 0.224, 0.225]
+  mean: 0.5
+  std: 0.5
 
 early_stopping:
   monitor: val/loss
-  min_delta: 0.0005
+  min_delta: 0.001
   patience: 10
   verbose: true
   mode: min

@@ -13,7 +13,7 @@ outdir: results_pred/
 dataset: testing/images
 
 model_name: resnet152
-checkpoint: checkpoints/model-j75sihxi-best-epoch049/model.ckpt
+checkpoint: checkpoints/model-onwggb74/last-v3.ckpt
 num_classes: 5
 batch_size: 1
 img_size: 256

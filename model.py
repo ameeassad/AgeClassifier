@@ -24,6 +24,21 @@ from utils import TripletLoss
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
+def weights_init_kaiming(m):
+    classname = m.__class__.__name__
+    if classname.find('Linear') != -1:
+        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_out')
+        nn.init.constant_(m.bias, 0.0)
+    elif classname.find('BatchNorm1d') != -1:
+        nn.init.normal_(m.weight, 1.0, 0.02)
+        nn.init.constant_(m.bias, 0.0)
+
+def weights_init_classifier(m):
+    classname = m.__class__.__name__
+    if classname.find('Linear') != -1:
+        nn.init.normal_(m.weight, std=0.001)
+        nn.init.constant_(m.bias, 0.0)
+
 class SimpleModel(LightningModule):
     def __init__(
         self,
@@ -31,11 +46,17 @@ class SimpleModel(LightningModule):
         pretrained: bool = False,
         num_classes: int | None = None,
         outdir: str = 'results',
+        skeleton: bool = False,
     ):
         super().__init__()
         self.save_hyperparameters()
 
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=num_classes)
+
+        # if skeleton, accept 4 channels instead of 3
+        if skeleton and model_name.startswith('resnet'):
+            self.model.conv1 = nn.Conv2d(4, self.model.conv1.out_channels, kernel_size=self.model.conv1.kernel_size,
+                                         stride=self.model.conv1.stride, padding=self.model.conv1.padding, bias=False)
         
         self.train_loss = nn.CrossEntropyLoss()
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
@@ -52,6 +73,7 @@ class SimpleModel(LightningModule):
 
     def get_activations(self, x):
         for name, module in self.model.named_modules():
+            # for resnet layer 4 captures the high level features
             if name == 'layer4':
                 x = module(x)
                 x.register_hook(self.activations_hook)
@@ -160,7 +182,7 @@ class TripletLossModel(LightningModule):
 
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=num_classes)
         
-        self.train_loss = TripletLoss(margin=margin)  # Use Triplet Loss
+        self.train_loss = TripletLoss(margin=margin) 
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
         self.val_loss = TripletLoss(margin=margin)
         self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
@@ -280,13 +302,14 @@ class TripletLossModel(LightningModule):
         lr_scheduler_config = get_lr_scheduler_config(optimizer)
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler_config}
     
-class ResNetPlus2FCModel(LightningModule):
+class ResNetPlusModel(LightningModule):
     def __init__(
         self,
         model_name: str = 'resnet18',
         pretrained: bool = True, # Use ImageNet pre-trained weights
         num_classes: int | None = None,
         outdir: str = 'results',
+        frozen_layers: int = 10,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -294,18 +317,26 @@ class ResNetPlus2FCModel(LightningModule):
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained, num_classes=0)  # No classification head yet
 
         # Freeze the ResNet backbone (except last 3 layers)
-        self.frozen_layers = 10
+        self.frozen_layers = frozen_layers
         self.resnet_layers = list(self.model.named_parameters())
         for name, param in self.resnet_layers[:-1*self.frozen_layers]:
             param.requires_grad = False
 
+        # Bottleneck
+        num_bottleneck = 512
+        self.fc = nn.Sequential(
+            nn.Linear(2048, num_bottleneck),
+            nn.BatchNorm1d(num_bottleneck),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.5),
+        )
+        self.fc.apply(weights_init_kaiming)  # Apply Kaiming initialization
 
-        # Add new fully connected layers
-        self.fc1 = nn.Linear(2048, 1024)  # ResNet-50 output features = 2048
-        self.fc2 = nn.Linear(1024, num_classes) 
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=0.5)  # Optional dropout for regularization
-
+        # Classifier 
+        self.classifier = nn.Sequential(
+            nn.Linear(num_bottleneck, num_classes)
+        )
+        self.classifier.apply(weights_init_classifier)  # Apply classifier initialization
         
         self.train_loss = nn.CrossEntropyLoss()
         self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
@@ -331,12 +362,10 @@ class ResNetPlus2FCModel(LightningModule):
     def forward(self, x):
          # Forward pass through ResNet-50 backbone
         features = self.model(x)
-        x = features.view(features.size(0), -1)  # Flatten the output
-        
-        # Fully connected layers
-        x = self.relu(self.fc1(x))
-        x = self.dropout(x)  # Optional
-        x = self.fc2(x)
+
+        x = features.view(features.size(0), -1) # Flatten output
+        x = self.fc(x)  # Bottleneck
+        x = self.classifier(x)  # Classifier
 
         return x
 
