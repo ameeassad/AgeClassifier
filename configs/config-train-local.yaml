@@ -3,7 +3,6 @@ notes:
 use_wandb: True
 wandb_entity: winniethepooh
 
-coco_setup: False
 annot_dir: ./annot/
 annot_train_file: train_sep_sightings.csv
 annot_val_file: val_sep_sightings.csv
@@ -13,6 +12,7 @@ annot_test_file:
 outdir: ./results
 dataset: /Users/amee/Library/CloudStorage/GoogleDrive-ameeassad@gmail.com/My Drive/artportalen_goeag
 
+pose_processing: False
 model_name: resnet152d
 checkpoint: 
 batch_size: 4

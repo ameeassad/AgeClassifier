@@ -7,11 +7,11 @@ annot_dir:
 annot_train_file: 
 annot_val_file: 
 annot_test_file: 
-coco_setup: False
 
 outdir: results_pred/
 dataset: testing/images
 
+pose_processing: False
 model_name: resnet152
 checkpoint: checkpoints/model-onwggb74/last-v3.ckpt
 num_classes: 5

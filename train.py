@@ -124,29 +124,33 @@ if __name__ == '__main__':
 
     seed_everything(config['seed'], workers=True)
 
-    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'])
-    if config['coco_setup']:
+    # setup dataset
+    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'], skeleton = config['pose_processing'])
+    
+    if config['annot_train_file'][:3]=="csv":
+        print('Setting up from CSV')
+        data.setup_from_csv(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
+    elif config['annot_train_file'][:4]=="json":
         print('Setting up from COCO')
         data.setup_from_coco(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
     else:
-        print('Setting up from CSV')
-        data.setup_from_csv(config['annot_dir'] + config['annot_train_file'], config['annot_dir'] + config['annot_val_file'])
+        raise ValueError('Unknown annotation file format')
 
-    
+    # setup model
     if config['checkpoint']:
-        print('Loading model from checkpoint')
+        print(f'Loading model {config['model_architecture']} from checkpoint')
         if config['model_architecture']=='ResNetPlusModel':
             model = ResNetPlusModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
         else:
-            model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'])
+            model = SimpleModel(model_name=config['model_name'], pretrained=False, num_classes=data.num_classes, outdir=config['outdir'], skeleton = config['pose_processing'])
         checkpoint = torch.load(config['checkpoint'])
         model.load_state_dict(checkpoint["state_dict"])
     else:
-        print('Start training from pretrained model')
+        print(f'Start training {config['model_architecture']} from pretrained model')
         if config['model_architecture']=='ResNetPlusModel':
             model = ResNetPlusModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
         else:
-            model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'])
+            model = SimpleModel(model_name=config['model_name'], pretrained=True, num_classes=data.num_classes, outdir=config['outdir'], skeleton = config['pose_processing'])
 
 
     trainer = get_trainer(config)
