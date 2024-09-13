@@ -95,6 +95,7 @@ def get_trainer(config) -> Trainer:
 
     if config['use_wandb']:
         wandb_logger = WandbLogger(project=config['project_name'], log_model=True)
+        wandb_logger.watch(model, log='all', log_freq=100)
         # add multiple hyperparameters
         wandb_logger.experiment.config.update({"model_architecture": config['model_architecture'], 
                                                 "checkpoint": config['checkpoint'],
@@ -111,8 +112,6 @@ def get_trainer(config) -> Trainer:
                                                 "lr_step_size": config['solver']['LR_STEP_SIZE'],
                                                 "lr_step_milestones": config['solver']['LR_STEP_MILESTONES']
                                                 })
-        wandb_logger.watch(model, log='all', log_freq=10)
-
     else:
         wandb_logger = None
 
@@ -123,7 +122,6 @@ def get_trainer(config) -> Trainer:
         'accelerator': accelerator,
         'devices': devices,
         'logger': wandb_logger,
-        'log_every_n_steps': 100,
         'deterministic': True,
     }
 
