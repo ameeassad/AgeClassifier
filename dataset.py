@@ -41,6 +41,13 @@ class ArtportalenDataModule(pl.LightningDataModule):
 
     Args:
         data_dir (str): Path to the dataset directory.
+        preprocess_lvl (int): Level of preprocessing to apply to the images.
+            0: original image
+            1: bounding box cropped image
+            2: masked image
+            3: masked + pose (skeleton) image in 1 channel
+            4: masked + body parts in channels
+
         batch_size (int): Number of samples per batch.
         size (int): Size of the image for resizing.
         mean (float or tuple): Mean for normalization.
@@ -52,19 +59,22 @@ class ArtportalenDataModule(pl.LightningDataModule):
         train_transforms (callable): Transformations applied to the training dataset.
         val_transforms (callable): Transformations applied to the validation dataset.
     """
-    def __init__(self, data_dir, batch_size=8, size=256, mean=0.5, std=0.5, test=False, cache_dir=None, skeleton=False):
+    def __init__(self, data_dir, preprocess_lvl=0, batch_size=8, size=256, mean=0.5, std=0.5, test=False, cache_dir=None, skeleton=False):
         super().__init__()
         self.data_dir = data_dir
+        self.preprocess_lvl = preprocess_lvl
         self.batch_size = batch_size
         self.size = size
         self.mean = (mean, mean, mean) if isinstance(mean, float) else tuple(mean)
         self.std = (std, std, std) if isinstance(std, float) else tuple(std)
         self.test = test
         self.cache_dir = cache_dir
-        self.skeleton = skeleton
+
+        if preprocess_lvl == 4:
+            self.skeleton = True
 
         # transformations
-        if skeleton:         
+        if self.skeleton:         
             self.train_transforms = SynchTransforms(mean=self.mean, std=self.std)
             self.val_transforms = ValTransforms(mean=self.mean, std=self.std, skeleton=True)
         else:

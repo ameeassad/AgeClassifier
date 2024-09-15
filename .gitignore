@@ -12,3 +12,5 @@ __pycache__/dataset.cpython-312.pyc
 __pycache__/model.cpython-312.pyc
 wandb/
 notebooks/data_cache/
+data_cache/
+wandb/
