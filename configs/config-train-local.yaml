@@ -16,6 +16,7 @@ pose_processing: True
 model_name: resnet50
 model_architecture: SimpleModel
 checkpoint: 
+preprocess_lvl: 4
 batch_size: 4
 img_size: 256
 epochs: 100

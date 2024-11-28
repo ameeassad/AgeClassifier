@@ -70,8 +70,11 @@ class ArtportalenDataModule(pl.LightningDataModule):
         self.test = test
         self.cache_dir = cache_dir
 
-        if preprocess_lvl == 4:
+        if preprocess_lvl == 3:
             self.skeleton = True
+        else:
+            self.skeleton = False
+
 
         # transformations
         if self.skeleton:         

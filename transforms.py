@@ -24,8 +24,6 @@ from torchvision.transforms.functional import resize, pad
 GaussianBlur((0, 1.5)),
 AdditiveGaussianNoise(loc=0, scale=(0.0, 0.01 * 255), per_channel=0.5),
 AddToHueAndSaturation((-5, 5)),  # change hue and saturation
-PiecewiseAffine(scale=(0.01, 0.03)),
-PerspectiveTransform(scale=(0.01, 0.1))
 
 random_order=True
 """

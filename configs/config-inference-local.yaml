@@ -14,6 +14,7 @@ dataset: testing/images
 pose_processing: True
 model_name: resnet152
 checkpoint: checkpoints/model-enzupiv0-local/last-v3.ckpt #checkpoints/model-onwggb74/last-v3.ckpt
+preprocess_lvl: 4
 num_classes: 5
 batch_size: 1
 img_size: 256

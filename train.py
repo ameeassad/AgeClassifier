@@ -99,6 +99,7 @@ def get_trainer(config) -> Trainer:
         # add multiple hyperparameters
         wandb_logger.experiment.config.update({"model_architecture": config['model_architecture'], 
                                                 "checkpoint": config['checkpoint'],
+                                                "preprocess_lvl": config['preprocess_lvl'],
                                                 "batch_size": config['batch_size'],
                                                 "img_size": config['img_size'], 
                                                 "seed": config['seed'],
@@ -143,7 +144,7 @@ if __name__ == '__main__':
     seed_everything(config['seed'], workers=True)
 
     # setup dataset
-    data = ArtportalenDataModule(data_dir=config['dataset'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'], skeleton = config['pose_processing'])
+    data = ArtportalenDataModule(data_dir=config['dataset'], preprocess_lvl=config['preprocess_lvl'], batch_size=config['batch_size'], size=config['img_size'], mean=config['transforms']['mean'], std=config['transforms']['std'])
     
     if config['annot_train_file'].endswith('.csv'):
         print('Setting up from CSV')

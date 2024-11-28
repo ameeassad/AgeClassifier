@@ -12,16 +12,16 @@ annot_test_file:
 outdir: /proj/nobackup/aiforeagles/AgeClassifier/results
 dataset: /proj/nobackup/aiforeagles/artportalen/artportalen_goeag
 
-pose_processing: True
 model_name: resnet50
 model_architecture: SimpleModel
 checkpoint: 
+preprocess_lvl: 3
 batch_size: 128
 img_size: 256
 epochs: 150
 save_interval: 10
 n_gpu: 1
-num_workers: 12
+num_workers: 8
 gpu_ids: 
 seed: 42
 
